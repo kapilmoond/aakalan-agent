@@ -21,7 +21,7 @@ import {
 import { ListRow, SectionHeading, SettingsContent } from './primitives'
 import { UninstallSection } from './uninstall-section'
 
-const RELEASE_NOTES_URL = 'https://github.com/NousResearch/hermes-agent/releases'
+const RELEASE_NOTES_URL = 'https://github.com/kapilmoond/aakalan-agent/releases'
 
 function relativeTime(ms: number | undefined, a: Translations['settings']['about']) {
   if (!ms) {
@@ -105,6 +105,53 @@ export function AboutSettings() {
           <p className="mt-1 text-xs text-muted-foreground">
             {version?.appVersion ? a.version(version.appVersion) : a.versionUnavailable}
           </p>
+        </div>
+      </div>
+
+      <div className="mx-auto mt-4 w-full max-w-2xl rounded-xl border px-4 py-4 text-sm">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="font-semibold">Aaklan Infra Consultancy</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              AI training, custom work automation &amp; civil engineering services · Hisar, Haryana
+            </p>
+            <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+              Shop No. 102, 1st Floor, Sector 15, Hisar, Haryana<br />
+              Phone / WhatsApp: +91 7015966089<br />
+              Email: contact@aakalaninfra.com<br />
+              Website: www.aakalaninfra.com
+            </p>
+          </div>
+          <div className="flex shrink-0 flex-col gap-2">
+            <Button asChild size="sm" variant="text">
+              <a
+                href="mailto:contact@aakalaninfra.com"
+                onClick={event => {
+                  event.preventDefault()
+                  void window.hermesDesktop?.openExternal?.('mailto:contact@aakalaninfra.com')
+                }}
+                rel="noreferrer"
+                target="_blank"
+              >
+                <ExternalLink className="size-3" />
+                Email
+              </a>
+            </Button>
+            <Button asChild size="sm" variant="text">
+              <a
+                href="https://www.aakalaninfra.com"
+                onClick={event => {
+                  event.preventDefault()
+                  void window.hermesDesktop?.openExternal?.('https://www.aakalaninfra.com')
+                }}
+                rel="noreferrer"
+                target="_blank"
+              >
+                <ExternalLink className="size-3" />
+                Website
+              </a>
+            </Button>
+          </div>
         </div>
       </div>
 
