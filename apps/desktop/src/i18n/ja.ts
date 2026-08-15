@@ -2162,7 +2162,7 @@ export const ja = defineLocale({
     applyRemote: '適用して再接続',
     backToSetup: '戻る',
     failedTitle: 'インストールに失敗しました',
-    settingUpTitle: 'Aakalan Agent Agent を設定中',
+    settingUpTitle: 'Aakalan Agent を設定中',
     finishingTitle: '仕上げ中',
     failedDesc:
       'インストール手順のいずれかが失敗しました。Windows では、別の Aakalan Agent CLI またはデスクトップインスタンスが実行中の場合に発生することがあります。実行中の Aakalan Agent インスタンスをすべて停止してから再試行してください。詳細は以下またはデスクトップログで確認できます。',
@@ -2185,7 +2185,7 @@ export const ja = defineLocale({
   },
 
   onboarding: {
-    headerTitle: 'Aakalan Agent Agent のセットアップをしましょう',
+    headerTitle: 'Aakalan Agent のセットアップをしましょう',
     headerDesc: 'チャットを始めるにはモデルプロバイダーを接続してください。ほとんどのオプションはワンクリックです。',
     preparingInstall: 'Aakalan Agent はインストールを完了中です。初回実行では通常 1 分以内に完了します。',
     starting: 'Aakalan Agent を起動中…',

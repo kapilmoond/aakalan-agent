@@ -476,7 +476,7 @@ def _resolve_session_token() -> str:
 
 
 _SESSION_TOKEN = _resolve_session_token()
-_SESSION_HEADER_NAME = "X-Aakalan Agent-Session-Token"
+_SESSION_HEADER_NAME = "X-Aakalan-Agent-Session-Token"
 _SSH_OWNER_NONCE: Optional[str] = None
 
 
@@ -579,7 +579,7 @@ def _require_token(request: Request) -> None:
 
     * **Loopback / ``--insecure`` mode** (``auth_required`` False): the
       ephemeral ``_SESSION_TOKEN`` is injected into the SPA HTML and echoed
-      back via ``X-Aakalan Agent-Session-Token`` (or the legacy ``Bearer`` header).
+      back via ``X-Aakalan-Agent-Session-Token`` (or the legacy ``Bearer`` header).
       Validate it here.
     * **Gated / OAuth mode** (``auth_required`` True): ``_SESSION_TOKEN`` is
       NOT injected (the SPA authenticates with a session cookie), so there is

@@ -2120,11 +2120,11 @@ class APIServerAdapter(BasePlatformAdapter):
     def _parse_session_key_header(
         self, request: "web.Request"
     ) -> tuple[Optional[str], Optional["web.Response"]]:
-        """Extract and validate the ``X-Aakalan Agent-Session-Key`` header.
+        """Extract and validate the ``X-Aakalan-Agent-Session-Key`` header.
 
         The session key is a stable per-channel identifier that scopes
         long-term memory (e.g. Honcho sessions) across transcripts.  It
-        is independent of ``X-Aakalan Agent-Session-Id``: callers may send
+        is independent of ``X-Aakalan-Agent-Session-Id``: callers may send
         either, both, or neither.
 
         Returns ``(session_key, None)`` on success (with an empty/absent
@@ -2136,18 +2136,18 @@ class APIServerAdapter(BasePlatformAdapter):
         unauthenticated client on a local-only server can't inject itself
         into another user's long-term memory scope by guessing a key.
         """
-        raw = request.headers.get("X-Aakalan Agent-Session-Key", "").strip()
+        raw = request.headers.get("X-Aakalan-Agent-Session-Key", "").strip()
         if not raw:
             return None, None
 
         if not self._api_key:
             logger.warning(
-                "X-Aakalan Agent-Session-Key rejected: no API key configured. "
+                "X-Aakalan-Agent-Session-Key rejected: no API key configured. "
                 "Set API_SERVER_KEY to enable long-term memory scoping."
             )
             return None, web.json_response(
                 _openai_error(
-                    "X-Aakalan Agent-Session-Key requires API key authentication. "
+                    "X-Aakalan-Agent-Session-Key requires API key authentication. "
                     "Configure API_SERVER_KEY to enable this feature."
                 ),
                 status=403,
@@ -3164,8 +3164,8 @@ class APIServerAdapter(BasePlatformAdapter):
                 "skills_api": True,
                 "audio_api": False,
                 "realtime_voice": False,
-                "session_continuity_header": "X-Aakalan Agent-Session-Id",
-                "session_key_header": "X-Aakalan Agent-Session-Key",
+                "session_continuity_header": "X-Aakalan-Agent-Session-Id",
+                "session_key_header": "X-Aakalan-Agent-Session-Key",
                 "cors": bool(self._cors_origins),
             },
             "endpoints": {
@@ -3770,9 +3770,9 @@ class APIServerAdapter(BasePlatformAdapter):
         )
         effective_session_id = result.get("session_id") if isinstance(result, dict) else session_id
         final_response = _resolve_media_to_data_urls(result.get("final_response", "") if isinstance(result, dict) else "")
-        headers = {"X-Aakalan Agent-Session-Id": effective_session_id or session_id}
+        headers = {"X-Aakalan-Agent-Session-Id": effective_session_id or session_id}
         if gateway_session_key:
-            headers["X-Aakalan Agent-Session-Key"] = gateway_session_key
+            headers["X-Aakalan-Agent-Session-Key"] = gateway_session_key
         runtime = {}
         if isinstance(result, dict):
             runtime = result.get("runtime") or {}
@@ -4028,10 +4028,10 @@ class APIServerAdapter(BasePlatformAdapter):
             "Content-Type": "text/event-stream",
             "Cache-Control": "no-cache",
             "X-Accel-Buffering": "no",
-            "X-Aakalan Agent-Session-Id": session_id,
+            "X-Aakalan-Agent-Session-Id": session_id,
         }
         if gateway_session_key:
-            headers["X-Aakalan Agent-Session-Key"] = gateway_session_key
+            headers["X-Aakalan-Agent-Session-Key"] = gateway_session_key
         response = web.StreamResponse(status=200, headers=headers)
         await response.prepare(request)
         try:
@@ -4198,11 +4198,11 @@ class APIServerAdapter(BasePlatformAdapter):
         # only allowed when the API key is configured and the request is
         # authenticated.  Without this gate, any unauthenticated client could
         # read arbitrary session history by guessing/enumerating session IDs.
-        provided_session_id = request.headers.get("X-Aakalan Agent-Session-Id", "").strip()
+        provided_session_id = request.headers.get("X-Aakalan-Agent-Session-Id", "").strip()
         if provided_session_id:
             if not self._api_key:
                 logger.warning(
-                    "Session continuation via X-Aakalan Agent-Session-Id rejected: "
+                    "Session continuation via X-Aakalan-Agent-Session-Id rejected: "
                     "no API key configured.  Set API_SERVER_KEY to enable "
                     "session continuity."
                 )
@@ -4423,10 +4423,10 @@ class APIServerAdapter(BasePlatformAdapter):
             finish_reason = "stop"
 
         response_headers = {
-            "X-Aakalan Agent-Session-Id": result.get("session_id", session_id),
+            "X-Aakalan-Agent-Session-Id": result.get("session_id", session_id),
         }
         if gateway_session_key:
-            response_headers["X-Aakalan Agent-Session-Key"] = gateway_session_key
+            response_headers["X-Aakalan-Agent-Session-Key"] = gateway_session_key
 
         # Hard-fail path: no usable assistant text AND a real failure → 5xx
         # with OpenAI-style error envelope so SDK clients raise instead of
@@ -4442,8 +4442,8 @@ class APIServerAdapter(BasePlatformAdapter):
                 "partial": is_partial,
                 "failed": is_failed,
             }
-            response_headers["X-Aakalan Agent-Completed"] = "false"
-            response_headers["X-Aakalan Agent-Partial"] = "true" if is_partial else "false"
+            response_headers["X-Aakalan-Agent-Completed"] = "false"
+            response_headers["X-Aakalan-Agent-Partial"] = "true" if is_partial else "false"
             return web.json_response(err_body, status=502, headers=response_headers)
 
         # Soft-partial path: we have *some* text but the run did not complete
@@ -4478,10 +4478,10 @@ class APIServerAdapter(BasePlatformAdapter):
                 "error": err_msg,
                 "error_code": "output_truncated" if finish_reason == "length" else "agent_error",
             }
-            response_headers["X-Aakalan Agent-Completed"] = "false"
-            response_headers["X-Aakalan Agent-Partial"] = "true" if is_partial else "false"
+            response_headers["X-Aakalan-Agent-Completed"] = "false"
+            response_headers["X-Aakalan-Agent-Partial"] = "true" if is_partial else "false"
             if err_msg:
-                response_headers["X-Aakalan Agent-Error"] = _redact_api_error_text(err_msg, limit=200)
+                response_headers["X-Aakalan-Agent-Error"] = _redact_api_error_text(err_msg, limit=200)
 
         return web.json_response(response_data, headers=response_headers)
 
@@ -4508,9 +4508,9 @@ class APIServerAdapter(BasePlatformAdapter):
         if cors:
             sse_headers.update(cors)
         if session_id:
-            sse_headers["X-Aakalan Agent-Session-Id"] = session_id
+            sse_headers["X-Aakalan-Agent-Session-Id"] = session_id
         if gateway_session_key:
-            sse_headers["X-Aakalan Agent-Session-Key"] = gateway_session_key
+            sse_headers["X-Aakalan-Agent-Session-Key"] = gateway_session_key
         response = web.StreamResponse(status=200, headers=sse_headers)
         await response.prepare(request)
 
@@ -4734,9 +4734,9 @@ class APIServerAdapter(BasePlatformAdapter):
         if cors:
             sse_headers.update(cors)
         if session_id:
-            sse_headers["X-Aakalan Agent-Session-Id"] = session_id
+            sse_headers["X-Aakalan-Agent-Session-Id"] = session_id
         if gateway_session_key:
-            sse_headers["X-Aakalan Agent-Session-Key"] = gateway_session_key
+            sse_headers["X-Aakalan-Agent-Session-Key"] = gateway_session_key
         response = web.StreamResponse(status=200, headers=sse_headers)
         await response.prepare(request)
 
@@ -5602,9 +5602,9 @@ class APIServerAdapter(BasePlatformAdapter):
             if conversation:
                 self._response_store.set_conversation(conversation, response_id)
 
-        response_headers = {"X-Aakalan Agent-Session-Id": _effective_session_id}
+        response_headers = {"X-Aakalan-Agent-Session-Id": _effective_session_id}
         if gateway_session_key:
-            response_headers["X-Aakalan Agent-Session-Key"] = gateway_session_key
+            response_headers["X-Aakalan-Agent-Session-Key"] = gateway_session_key
         return web.json_response(response_data, headers=response_headers)
 
     # ------------------------------------------------------------------
@@ -7041,7 +7041,7 @@ class APIServerAdapter(BasePlatformAdapter):
             task.add_done_callback(self._background_tasks.discard)
 
         response_headers = (
-            {"X-Aakalan Agent-Session-Key": gateway_session_key} if gateway_session_key else {}
+            {"X-Aakalan-Agent-Session-Key": gateway_session_key} if gateway_session_key else {}
         )
         return web.json_response(
             {"run_id": run_id, "status": "started"},

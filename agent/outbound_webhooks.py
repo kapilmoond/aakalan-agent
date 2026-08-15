@@ -407,7 +407,7 @@ def _serialize_payload(
     """Render the POST body.  Same top-level shape as shell hooks' stdin
     (documented in :mod:`agent.shell_hooks`), plus delivery metadata.
 
-    ``delivery_id`` is shared with the ``X-Aakalan Agent-Delivery`` header so
+    ``delivery_id`` is shared with the ``X-Aakalan-Agent-Delivery`` header so
     receivers can dedupe on either — and since it (plus ``timestamp``)
     lives inside the HMAC-signed body, it doubles as replay protection.
     """
@@ -437,14 +437,14 @@ def _build_delivery(
     headers = {
         "Content-Type": "application/json",
         "User-Agent": "Aakalan Agent-Agent-Outbound-Webhook",
-        "X-Aakalan Agent-Event": event,
-        "X-Aakalan Agent-Delivery": delivery_id,
+        "X-Aakalan-Agent-Event": event,
+        "X-Aakalan-Agent-Delivery": delivery_id,
     }
     if target.secret:
         digest = hmac.new(
             target.secret.encode("utf-8"), body, hashlib.sha256
         ).hexdigest()
-        headers["X-Aakalan Agent-Signature-256"] = f"sha256={digest}"
+        headers["X-Aakalan-Agent-Signature-256"] = f"sha256={digest}"
     return {
         "url": target.url,
         "label": target.label,

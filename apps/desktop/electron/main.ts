@@ -4375,7 +4375,7 @@ function resolveHermesBackend(backendArgs) {
   //    is a recoverable state the GUI can drive through.
   return {
     kind: 'bootstrap-needed',
-    label: 'Aakalan Agent Agent not installed yet; bootstrap required',
+    label: 'Aakalan Agent not installed yet; bootstrap required',
     command: null,
     args: backendArgs,
     bootstrap: true,
@@ -4603,7 +4603,7 @@ function fetchJson(url, token, options: any = {}) {
         method: options.method || 'GET',
         headers: {
           'Content-Type': contentType,
-          'X-Aakalan Agent-Session-Token': token,
+          'X-Hermes-Session-Token': token,
           // RFC 8252 native flow authenticates the gated gateway with a bearer
           // token instead of the loopback session-token header. When
           // ``options.bearer`` is set we send Authorization: Bearer <token>;
@@ -4702,7 +4702,7 @@ function downloadViaTokenToFile(url, token, ctx, options: any = {}) {
       {
         method: 'GET',
         headers: {
-          'X-Aakalan Agent-Session-Token': token
+          'X-Hermes-Session-Token': token
         }
       },
       res => {

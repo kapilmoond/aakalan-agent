@@ -26893,7 +26893,7 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
         if proxy_key:
             headers["Authorization"] = f"Bearer {proxy_key}"
         if session_id:
-            headers["X-Aakalan Agent-Session-Id"] = session_id
+            headers["X-Aakalan-Agent-Session-Id"] = session_id
 
         body = {
             "model": "hermes-agent",

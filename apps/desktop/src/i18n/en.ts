@@ -2434,7 +2434,7 @@ export const en: Translations = {
     applyRemote: 'Apply and reconnect',
     backToSetup: 'Back',
     failedTitle: 'Installation failed',
-    settingUpTitle: 'Setting up Aakalan Agent Agent',
+    settingUpTitle: 'Setting up Aakalan Agent',
     finishingTitle: 'Finishing up',
     failedDesc:
       'One of the install steps failed. On Windows, this can happen if another Aakalan Agent CLI or desktop instance is running. Stop any running Aakalan Agent instances, then retry. Check the details below or the desktop log for the full transcript.',
@@ -2457,7 +2457,7 @@ export const en: Translations = {
   },
 
   onboarding: {
-    headerTitle: "Let's get you setup with Aakalan Agent Agent",
+    headerTitle: "Let's get you setup with Aakalan Agent",
     headerDesc: 'Connect a model provider to start chatting. Most options take one click.',
     preparingInstall: 'Aakalan Agent is finishing install. This usually takes under a minute on first run.',
     starting: 'Starting Aakalan Agent…',
