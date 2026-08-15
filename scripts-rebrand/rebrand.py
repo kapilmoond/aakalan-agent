@@ -35,6 +35,9 @@ def rewrite_string_literal(m):
     if SKIP_CONTEXT.search(inner):
         return s
     new_inner = WORD.sub("Aakalan Agent", inner)
+    # HTTP header names cannot contain spaces. X-Hermes-Foo -> X-Aakalan Agent-Foo
+    # would crash Node with ERR_INVALID_HTTP_TOKEN.
+    new_inner = new_inner.replace("X-Aakalan Agent-", "X-Aakalan-Agent-")
     if new_inner != inner:
         return quote + new_inner + quote
     return s

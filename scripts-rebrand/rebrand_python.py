@@ -38,6 +38,7 @@ def rewrite(m):
     if SKIP_CONTEXT.search(inner):
         return s
     new_inner = WORD.sub("Aakalan Agent", inner)
+    new_inner = new_inner.replace("X-Aakalan Agent-", "X-Aakalan-Agent-")
     if new_inner == inner:
         return s
     if s[:3] in ('"""', "'''"):
