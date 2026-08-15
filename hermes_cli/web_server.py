@@ -477,6 +477,11 @@ def _resolve_session_token() -> str:
 
 _SESSION_TOKEN = _resolve_session_token()
 _SESSION_HEADER_NAME = "X-Aakalan-Agent-Session-Token"
+# Accept the old Hermes header so mixed desktop/web builds still auth.
+_SESSION_HEADER_ALIASES = (
+    "X-Aakalan-Agent-Session-Token",
+    "X-Hermes-Session-Token",
+)
 _SSH_OWNER_NONCE: Optional[str] = None
 
 
@@ -547,12 +552,13 @@ def _has_valid_session_token(request: Request) -> bool:
     accept the legacy Bearer path for backward compatibility with older
     dashboard bundles.
     """
-    session_header = request.headers.get(_SESSION_HEADER_NAME, "")
-    if session_header and hmac.compare_digest(
-        session_header.encode(),
-        _SESSION_TOKEN.encode(),
-    ):
-        return True
+    for header_name in _SESSION_HEADER_ALIASES:
+        session_header = request.headers.get(header_name, "")
+        if session_header and hmac.compare_digest(
+            session_header.encode(),
+            _SESSION_TOKEN.encode(),
+        ):
+            return True
 
     auth = request.headers.get("authorization", "")
     expected = f"Bearer {_SESSION_TOKEN}"
