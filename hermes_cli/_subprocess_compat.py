@@ -282,7 +282,7 @@ def suppress_platform_ver_console() -> None:
     CPython 3.11 (``platform()`` → ``Windows-10-10.0.xxxxx-SP0`` either way).
 
     Call early, before heavyweight imports — the flash typically happens
-    during a dependency's import, not from Hermes' own code.
+    during a dependency's import, not from Aakalan Agent' own code.
     """
     if not IS_WINDOWS:
         return

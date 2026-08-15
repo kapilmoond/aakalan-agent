@@ -1,6 +1,6 @@
 // Spoken stop-word detection for the voice conversation loop.
 //
-// When someone is in a hands-free "Hey Hermes" voice chat, the natural way to
+// When someone is in a hands-free "Hey Aakalan Agent" voice chat, the natural way to
 // end it is to SAY "stop" — not reach for the mouse. Without this, a spoken
 // "stop" is just transcribed and sent to the agent as a normal turn, so the
 // conversation never ends (the reported bug). This matcher recognises a short

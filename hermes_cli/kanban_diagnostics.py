@@ -1146,7 +1146,7 @@ def config_from_kanban_config(kanban_cfg: Optional[dict]) -> dict:
 
 
 def config_from_runtime_config(raw_config: Optional[dict]) -> dict:
-    """Build diagnostics config from the full Hermes runtime config.
+    """Build diagnostics config from the full Aakalan Agent runtime config.
 
     Carries through ``kanban``, ``auxiliary``, and ``model`` keys so triage-
     aware rules can inspect the active aux-helper and main-model state.

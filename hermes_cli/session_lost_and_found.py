@@ -13,7 +13,7 @@ walks raw pages and rebuilds rows it cannot attribute to a schema into
 
 This module shells out to that CLI (it is a shell feature, NOT available via
 the Python ``sqlite3`` module) and then heuristically maps ``lost_and_found``
-rows back into a fresh current-schema Hermes session database.
+rows back into a fresh current-schema Aakalan Agent session database.
 
 Everything produced through this lane is explicitly **best effort**: column
 mapping is heuristic (field counts plus sentinel values), fabricated parent

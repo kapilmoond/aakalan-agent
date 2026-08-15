@@ -581,7 +581,7 @@ export function SkillsView({ setStatusbarItemGroup: _setStatusbarItemGroup, ...p
           <SelectContent>
             {profiles.map(p => (
               <SelectItem key={p.name} value={p.name}>
-                {p.is_default ? 'Hermes (default)' : p.name}
+                {p.is_default ? 'Aakalan Agent (default)' : p.name}
               </SelectItem>
             ))}
           </SelectContent>

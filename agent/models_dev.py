@@ -220,7 +220,7 @@ _MODELS_DEV_TO_PROVIDER: Optional[Dict[str, List[str]]] = None
 
 
 def _models_dev_to_hermes_ids(mdev_id: str) -> List[str]:
-    """Return the Hermes provider ids that map to *mdev_id* (may be [])."""
+    """Return the Aakalan Agent provider ids that map to *mdev_id* (may be [])."""
     global _MODELS_DEV_TO_PROVIDER
     if _MODELS_DEV_TO_PROVIDER is None:
         reverse: Dict[str, List[str]] = {}
@@ -901,7 +901,7 @@ def _load_model_overrides() -> Dict[str, Any]:
 def _provider_override_section(provider: str) -> Optional[Dict[str, Any]]:
     """Return the override section for *provider*, or None.
 
-    Accepts either the Hermes provider id or the models.dev provider id as
+    Accepts either the Aakalan Agent provider id or the models.dev provider id as
     the config key, so ``copilot`` and ``github-copilot`` both work
     regardless of which id space a caller passes in.
     """
@@ -1097,7 +1097,7 @@ def _merge_catalog_entry_with_override(
 def _get_provider_models(
     provider: str, *, allow_network: bool = False
 ) -> Optional[Dict[str, Any]]:
-    """Resolve a Hermes provider ID to its models dict from models.dev.
+    """Resolve a Aakalan Agent provider ID to its models dict from models.dev.
 
     Returns the models dict or None if the provider is unknown or has no data.
 
@@ -1453,7 +1453,7 @@ def get_provider_info(
     catalog is worth a short network wait. Hot-path callers should pass
     ``allow_network=False``.
     """
-    # Resolve Hermes ID → models.dev ID
+    # Resolve Aakalan Agent ID → models.dev ID
     mdev_id = PROVIDER_TO_MODELS_DEV.get(provider_id, provider_id)
 
     # NOTE: keep the zero-argument call on the default path. Dozens of test

@@ -17,7 +17,7 @@ Different LLM providers expect model identifiers in different formats:
   ``deepseek-v<N>-*``).  The legacy aliases ``deepseek-chat`` and
   ``deepseek-reasoner`` were retired on 2026-07-24 and are remapped to
   ``deepseek-v4-flash`` (official non-thinking / thinking shims).  Older
-  Hermes revisions folded every non-reasoner input into
+  Aakalan Agent revisions folded every non-reasoner input into
   ``deepseek-chat``, which on aggregators routes to V3 — so a user
   picking V4 Pro was silently downgraded.
 - **Custom** and remaining providers pass the name through as-is.
@@ -241,7 +241,7 @@ def _dots_to_hyphens(model_name: str) -> str:
 
 
 def _normalize_provider_alias(provider_name: str) -> str:
-    """Resolve provider aliases to Hermes' canonical ids."""
+    """Resolve provider aliases to Aakalan Agent' canonical ids."""
     raw = (provider_name or "").strip().lower()
     if not raw:
         return raw

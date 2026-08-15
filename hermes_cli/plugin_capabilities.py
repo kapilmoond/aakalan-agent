@@ -146,7 +146,7 @@ def parse_declared_capabilities(raw: Any, plugin_name: str = "?") -> List[str]:
     """Normalize a manifest ``capabilities:`` value into known capability ids.
 
     Unknown ids are dropped with a warning (forward compat: a plugin built
-    for a newer Hermes may declare ids this build doesn't know; they can
+    for a newer Aakalan Agent may declare ids this build doesn't know; they can
     never be granted here, so hiding them from the consent screen is the
     fail-closed choice — the plugin must degrade gracefully).
     """

@@ -136,7 +136,7 @@ def _encrypted_disk_cache_path(home_path: Optional[Path] = None) -> Path:
 
 
 def _hermes_bin_dir() -> Path:
-    """Where Hermes stores its managed binaries.  Profile-aware."""
+    """Where Aakalan Agent stores its managed binaries.  Profile-aware."""
     from hermes_constants import get_hermes_home
 
     return get_hermes_home() / "bin"

@@ -124,7 +124,7 @@ def _install_plugin_debug_handler(force: bool = False) -> None:
     """When HERMES_PLUGINS_DEBUG is on, tee plugin logs to stderr at DEBUG.
 
     Idempotent: only attaches the handler once per process unless ``force``
-    is passed. Does not touch the root logger or other Hermes loggers.
+    is passed. Does not touch the root logger or other Aakalan Agent loggers.
     """
     global _DEBUG_HANDLER_INSTALLED, _PLUGINS_DEBUG
     if force:
@@ -554,7 +554,7 @@ def _serialized_replacement(method):
 
 @contextmanager
 def _plugin_home_scope(home: Path):
-    """Bind discovery and loading to the manager's immutable Hermes home."""
+    """Bind discovery and loading to the manager's immutable Aakalan Agent home."""
     token = set_hermes_home_override(home)
     try:
         yield
@@ -700,7 +700,7 @@ def _parse_manifest_v2_fields(data: Mapping, key: str) -> Dict[str, Any]:
         mv = 1
     if mv > SUPPORTED_MANIFEST_VERSION:
         logger.warning(
-            "Plugin %s: manifest_version %d is newer than this Hermes "
+            "Plugin %s: manifest_version %d is newer than this Aakalan Agent "
             "supports (%d); loading anyway and ignoring unknown fields",
             key, mv, SUPPORTED_MANIFEST_VERSION,
         )
@@ -1216,7 +1216,7 @@ def _plugin_relative_segments(key: str) -> tuple[str, ...]:
     """Validate and split a plugin-relative settings key.
 
     The public API accepts only relative keys (``endpoint`` or
-    ``retry.policy``).  Full Hermes paths, traversal syntax, and the security-
+    ``retry.policy``).  Full Aakalan Agent paths, traversal syntax, and the security-
     sensitive core roots called out in #64227 are rejected before any config
     read occurs.
     """
@@ -1935,7 +1935,7 @@ class PluginContext:
     def _tool_override_allowed(self, tool_name: str) -> bool:
         """Return True if this plugin is configured to override built-in tools.
 
-        Bundled plugins (shipped with Hermes core) are trusted by default —
+        Bundled plugins (shipped with Aakalan Agent core) are trusted by default —
         an override there is a deliberate maintainer choice, not a third-party
         plugin trying to elevate privilege. For every other source, the
         canonical check is :func:`plugin_capability_granted` with the
@@ -4364,7 +4364,7 @@ class PluginManager:
         directory plugins: memory providers (``exclusive``) and model
         providers (``model-provider``) have their own discovery systems,
         so importing them here registers nothing and only pays the
-        module's import cost in every Hermes process (e.g. a pip
+        module's import cost in every Aakalan Agent process (e.g. a pip
         memory-provider plugin pulling in onnxruntime via fastembed —
         ~60 MB RSS on startup).
 
@@ -4646,7 +4646,7 @@ class PluginManager:
     def _warn_python_dependencies(self, manifest: PluginManifest) -> None:
         """Surface declared pip dependencies (#64165).
 
-        python_dependencies is a declaration seam ONLY: Hermes validates and
+        python_dependencies is a declaration seam ONLY: Aakalan Agent validates and
         prints the requirements with an install hint but NEVER auto-installs
         them. The isolation design (constraints installs vs. vendored dirs
         vs. conflict-detection-and-refusal) is an explicitly deferred
@@ -4671,7 +4671,7 @@ class PluginManager:
         if missing:
             logger.warning(
                 "Plugin %s declares Python dependencies that are not "
-                "installed: %s. Hermes does not install plugin dependencies "
+                "installed: %s. Aakalan Agent does not install plugin dependencies "
                 "automatically; install them yourself, e.g.: pip install %s",
                 key, ", ".join(missing),
                 " ".join(f"'{m}'" for m in missing),

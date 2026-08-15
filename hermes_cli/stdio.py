@@ -47,7 +47,7 @@ def _flip_console_code_page_to_utf8() -> None:
     """Set the attached console's input and output code pages to UTF-8.
 
     Uses ``SetConsoleCP`` / ``SetConsoleOutputCP`` via ``ctypes``.  Failure
-    is silent — if there's no attached console (e.g. Hermes is running
+    is silent — if there's no attached console (e.g. Aakalan Agent is running
     behind a redirected stdout, under a service, or inside a PTY-less CI
     runner) these calls simply return 0 and we move on.
 
@@ -167,7 +167,7 @@ def _default_windows_editor() -> str:
        blocking editor (``subprocess.call(["notepad", file])`` blocks until
        the user closes the window).  This is the "always-works" default.
 
-    The prompt_toolkit buffer's ``open_in_editor`` and Hermes's
+    The prompt_toolkit buffer's ``open_in_editor`` and Aakalan Agent's
     ``hermes config edit`` both honour ``$EDITOR``.  Users who prefer a
     different editor can override:
 

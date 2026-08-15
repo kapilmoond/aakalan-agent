@@ -83,7 +83,7 @@ def get_conversation_context() -> Optional[str]:
 
 
 def _hermes_version() -> str:
-    """Return the current Hermes release version, e.g. ``"0.13.0"``.
+    """Return the current Aakalan Agent release version, e.g. ``"0.13.0"``.
 
     Falls back to ``"unknown"`` if ``hermes_cli`` cannot be imported (should
     never happen in a real install — guarded for defensive testing).
@@ -104,10 +104,10 @@ def hermes_client_tag() -> str:
 
 
 def conversation_tag(session_id: str) -> str:
-    """Return the ``conversation=...`` tag for a Hermes session/conversation.
+    """Return the ``conversation=...`` tag for a Aakalan Agent session/conversation.
 
     Format: ``conversation=<session_id>``. ``session_id`` is the canonical
-    Hermes conversation identifier (``AIAgent.session_id``) — the same value
+    Aakalan Agent conversation identifier (``AIAgent.session_id``) — the same value
     used for ``~/.hermes/sessions/`` storage, session logs, and lineage.
 
     Unlike the product/client tags this is high-cardinality (one value per

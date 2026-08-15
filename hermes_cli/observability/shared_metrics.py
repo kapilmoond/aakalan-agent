@@ -1,4 +1,4 @@
-"""Durable aggregation and local export for Hermes shared metrics."""
+"""Durable aggregation and local export for Aakalan Agent shared metrics."""
 
 from __future__ import annotations
 

@@ -291,9 +291,9 @@ def run_secret_cli(
     * The child gets ``PATH``/``HOME``/locale basics plus only the env
       vars named in ``allow_env`` (auth/session vars) and ``extra_env``
       — never a copy of the full post-dotenv ``os.environ``, which by
-      this point holds every credential Hermes knows about.
+      this point holds every credential Aakalan Agent knows about.
     * ``NO_COLOR=1`` is set and stderr/stdout are ANSI-scrubbed so
-      helper diagnostics can't smuggle escape sequences into Hermes
+      helper diagnostics can't smuggle escape sequences into Aakalan Agent
       output.
     * stdin is ``/dev/null`` so a helper that decides to prompt fails
       fast instead of hanging startup.

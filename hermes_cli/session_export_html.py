@@ -1,5 +1,5 @@
 """
-HTML Export generator for Hermes sessions.
+HTML Export generator for Aakalan Agent sessions.
 Generates a standalone, beautiful HTML file with all messages embedded.
 Supports single and multi-session exports with a professional sidebar.
 No remote dependencies.
@@ -809,7 +809,7 @@ def generate_multi_session_html_export(sessions: List[Dict[str, Any]]) -> str:
     for s in sessions:
         sid = str(s.get("id", "N/A"))
         escaped_sid = _escape_html(sid)
-        title = s.get("title") or "Hermes Session"
+        title = s.get("title") or "Aakalan Agent Session"
         model = s.get("model") or "Unknown"
         started_at = _format_timestamp(s.get("started_at", 0))
         messages = s.get("messages", [])
@@ -856,7 +856,7 @@ def generate_multi_session_html_export(sessions: List[Dict[str, Any]]) -> str:
 
     script_nonce = secrets.token_urlsafe(16)
     return HTML_TEMPLATE.format(
-        page_title="Hermes Session Export" if is_multi else _escape_html(sessions[0].get("title") or "Hermes Session"),
+        page_title="Aakalan Agent Session Export" if is_multi else _escape_html(sessions[0].get("title") or "Aakalan Agent Session"),
         sidebar_html=sidebar_html,
         sessions_html="\n".join(sessions_html_list),
         main_margin="var(--sidebar-width)" if is_multi else "0",

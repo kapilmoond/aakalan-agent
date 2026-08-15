@@ -857,7 +857,7 @@ class RelayAdapter(BasePlatformAdapter):
 
         Mirrors the connector's promptCodec.decodePromptCallback (the token
         alphabet is [A-Za-z0-9_.-], ≤32 per id) so both ends agree on what is
-        — and is not — a Hermes prompt answer.
+        — and is not — a Aakalan Agent prompt answer.
         """
         import re
 

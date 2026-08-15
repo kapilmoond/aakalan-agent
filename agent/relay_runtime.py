@@ -1,4 +1,4 @@
-"""Profile-scoped NeMo Relay runtimes owned by the Hermes agent core."""
+"""Profile-scoped NeMo Relay runtimes owned by the Aakalan Agent agent core."""
 
 from __future__ import annotations
 
@@ -106,7 +106,7 @@ def pop_relay_scope(
 
     NeMo Relay ``scope.pop`` gained ``metadata`` in 0.4+. Older wheels (e.g.
     0.3.x) raise ``TypeError: pop() got an unexpected keyword argument
-    'metadata'`` when Hermes finalization forwards runtime metadata. Filter to
+    'metadata'`` when Aakalan Agent finalization forwards runtime metadata. Filter to
     parameters the live binding accepts so turn/session close can complete.
     """
     pop = relay.scope.pop
@@ -130,7 +130,7 @@ def pop_relay_scope(
 
 @dataclass
 class RelaySession:
-    """One isolated Relay scope stack owned by a Hermes session."""
+    """One isolated Relay scope stack owned by a Aakalan Agent session."""
 
     session_id: str
     parent_session_id: str = ""
@@ -228,7 +228,7 @@ class RelayRuntime:
             self._execution_consumers.discard(consumer)
 
     def managed_execution_enabled(self) -> bool:
-        """Return whether a Hermes-managed consumer needs the Relay pipeline."""
+        """Return whether a Aakalan Agent-managed consumer needs the Relay pipeline."""
         with self._execution_consumers_lock:
             return bool(self._execution_consumers)
 
@@ -336,7 +336,7 @@ class RelayRuntime:
                 )
             except Exception:
                 logger.warning(
-                    "Hermes Relay segment close failed (session=%s segment=%d); "
+                    "Aakalan Agent Relay segment close failed (session=%s segment=%d); "
                     "abandoning the old segment span",
                     session.session_id,
                     session.segment - 1,
@@ -369,7 +369,7 @@ class RelayRuntime:
                 session.context = context
             except Exception:
                 logger.warning(
-                    "Hermes Relay segment open failed (session=%s segment=%d); "
+                    "Aakalan Agent Relay segment open failed (session=%s segment=%d); "
                     "keeping the prior scope handle",
                     session.session_id,
                     session.segment,
@@ -423,7 +423,7 @@ class RelayRuntime:
             self._subagent_parent_handles.pop(child_session_id, None)
 
     def get_session(self, session_id: str) -> RelaySession | None:
-        """Return an active Hermes Relay session without creating one."""
+        """Return an active Aakalan Agent Relay session without creating one."""
         with self._sessions_lock:
             session = self._sessions.get(str(session_id or ""))
         if session is None:
@@ -432,7 +432,7 @@ class RelayRuntime:
             return None if session.closing else session
 
     def get_session_handle(self, session_id: str) -> Any:
-        """Return the Relay parent handle for a Hermes session, if active."""
+        """Return the Relay parent handle for a Aakalan Agent session, if active."""
         session = self.get_session(session_id)
         return None if session is None else session.handle
 
@@ -460,9 +460,9 @@ class RelayRuntime:
         """
         with session.lock:
             if session.closing and not allow_closing:
-                raise RuntimeError("Hermes Relay session is closing")
+                raise RuntimeError("Aakalan Agent Relay session is closing")
             if session.context is None or session.handle is None:
-                raise RuntimeError("Hermes Relay session context is unavailable")
+                raise RuntimeError("Aakalan Agent Relay session context is unavailable")
             relay_context = session.context.copy()
 
         context = contextvars.copy_context()
@@ -508,9 +508,9 @@ class RelayRuntime:
         """Create and await an operation inside the session's saved context."""
         with session.lock:
             if session.closing and not allow_closing:
-                raise RuntimeError("Hermes Relay session is closing")
+                raise RuntimeError("Aakalan Agent Relay session is closing")
             if session.context is None or session.handle is None:
-                raise RuntimeError("Hermes Relay session context is unavailable")
+                raise RuntimeError("Aakalan Agent Relay session context is unavailable")
             relay_context = session.context.copy()
 
         context = contextvars.copy_context()
@@ -535,7 +535,7 @@ class RelayRuntime:
         data: Any = None,
         metadata: Any = None,
     ) -> bool:
-        """Emit a mark parented to the Hermes session identified by ``event``."""
+        """Emit a mark parented to the Aakalan Agent session identified by ``event``."""
         session = self.ensure_session(event)
         if session is None:
             return False
@@ -556,7 +556,7 @@ class RelayRuntime:
         tool_name: str,
         args: dict[str, Any],
     ) -> dict[str, Any]:
-        """Apply Relay request rewriting before Hermes authorizes a tool call."""
+        """Apply Relay request rewriting before Aakalan Agent authorizes a tool call."""
         if not self.managed_execution_enabled():
             return args
         request_intercepts = getattr(
@@ -678,14 +678,14 @@ class RelayRuntime:
                 except Exception as drain_exc:
                     error_holder["drain"] = drain_exc
                     logger.warning(
-                        "Hermes Relay orphaned scope drain failed",
+                        "Aakalan Agent Relay orphaned scope drain failed",
                         exc_info=True,
                     )
                     break
 
             if drained_holder["count"]:
                 logger.warning(
-                    "Hermes Relay drained %d orphaned scope(s) before closing %s",
+                    "Aakalan Agent Relay drained %d orphaned scope(s) before closing %s",
                     drained_holder["count"],
                     handle,
                 )
@@ -765,7 +765,7 @@ class RelayRuntime:
             self._subagent_parent_handles.pop(session_id, None)
         if failures:
             logger.warning(
-                "Hermes Relay session %s closed with errors: %s",
+                "Aakalan Agent Relay session %s closed with errors: %s",
                 session_id,
                 "; ".join(failures),
             )
@@ -788,7 +788,7 @@ class RelayRuntime:
         try:
             return callback(*args, **kwargs)
         except Exception:
-            logger.warning("Hermes Relay runtime operation failed", exc_info=True)
+            logger.warning("Aakalan Agent Relay runtime operation failed", exc_info=True)
             return None
 
 
@@ -833,7 +833,7 @@ RelayHost = RelayRuntime | NoopRelayRuntime
 
 
 class RelayHostRegistry:
-    """Own exactly one Relay host for each canonical Hermes profile."""
+    """Own exactly one Relay host for each canonical Aakalan Agent profile."""
 
     def __init__(self) -> None:
         self._lock = threading.RLock()
@@ -857,7 +857,7 @@ class RelayHostRegistry:
                 host = RelayRuntime(profile_key=key)
             except Exception as exc:
                 logger.warning(
-                    "Hermes Relay runtime initialization failed", exc_info=True
+                    "Aakalan Agent Relay runtime initialization failed", exc_info=True
                 )
                 host = NoopRelayRuntime(profile_key=key, reason=str(exc))
             self._hosts[key] = host
@@ -895,7 +895,7 @@ class ConversationLease:
 
 @dataclass
 class RelayTurnContext:
-    """Runtime-only context for one Hermes turn or top-level task."""
+    """Runtime-only context for one Aakalan Agent turn or top-level task."""
 
     lease: ConversationLease
     turn_id: str
@@ -950,7 +950,7 @@ class managed_callback_guard:
 
 
 class RelaySessionCoordinator:
-    """Own semantic conversation and turn lifetimes for Hermes core."""
+    """Own semantic conversation and turn lifetimes for Aakalan Agent core."""
 
     def __init__(self, registry: RelayHostRegistry = HOST_REGISTRY) -> None:
         self.registry = registry
@@ -988,7 +988,7 @@ class RelaySessionCoordinator:
                 callback(host, context)
             except Exception:
                 logger.warning(
-                    "Hermes Relay session initializer failed: %s",
+                    "Aakalan Agent Relay session initializer failed: %s",
                     name,
                     exc_info=True,
                 )
@@ -1032,7 +1032,7 @@ class RelaySessionCoordinator:
                     )
             except Exception:
                 logger.warning(
-                    "Hermes Relay conversation initialization failed",
+                    "Aakalan Agent Relay conversation initialization failed",
                     exc_info=True,
                 )
         return ConversationLease(
@@ -1052,7 +1052,7 @@ class RelaySessionCoordinator:
         task_id: str,
     ) -> RelayTurnContext:
         if lease.released:
-            raise RuntimeError("Hermes Relay conversation lease is released")
+            raise RuntimeError("Aakalan Agent Relay conversation lease is released")
         turn = RelayTurnContext(lease=lease, turn_id=turn_id, task_id=task_id)
         key = (lease.profile_key, lease.session_id)
         with self._active_turns_lock:
@@ -1063,7 +1063,7 @@ class RelaySessionCoordinator:
                 # their completion order is not guaranteed to be LIFO.
                 turn.relay_enabled = False
                 logger.warning(
-                    "Skipping Relay instrumentation for concurrent Hermes turn "
+                    "Skipping Relay instrumentation for concurrent Aakalan Agent turn "
                     "%s in session %s",
                     turn_id,
                     lease.session_id,
@@ -1095,7 +1095,7 @@ class RelaySessionCoordinator:
                     lease.host.rotate_session_scope(session, reason=reason)
             except Exception:
                 logger.warning(
-                    "Hermes Relay segment rotation failed", exc_info=True
+                    "Aakalan Agent Relay segment rotation failed", exc_info=True
                 )
             try:
                 turn.handle = lease.host.run_in_session(
@@ -1113,7 +1113,7 @@ class RelaySessionCoordinator:
                     timeout=_SCOPE_OP_TIMEOUT,
                 )
             except Exception:
-                logger.warning("Hermes Relay turn initialization failed", exc_info=True)
+                logger.warning("Aakalan Agent Relay turn initialization failed", exc_info=True)
         turn._previous_turn = _CURRENT_TURN.get()
         _CURRENT_TURN.set(turn)
         return turn
@@ -1142,7 +1142,7 @@ class RelaySessionCoordinator:
                         )
                         if failure:
                             logger.warning(
-                                "Hermes Relay turn finalization failed: %s",
+                                "Aakalan Agent Relay turn finalization failed: %s",
                                 failure,
                             )
             finally:
@@ -1170,7 +1170,7 @@ class RelaySessionCoordinator:
                         })
                 except Exception:
                     logger.warning(
-                        "Hermes Relay child conversation finalization failed",
+                        "Aakalan Agent Relay child conversation finalization failed",
                         exc_info=True,
                     )
                 finally:
@@ -1206,7 +1206,7 @@ class RelaySessionCoordinator:
             lease.host.close_session({"session_id": lease.session_id})
         except Exception:  # noqa: BLE001 - telemetry must never block end_turn
             logger.warning(
-                "Hermes Relay deferred session close failed", exc_info=True
+                "Aakalan Agent Relay deferred session close failed", exc_info=True
             )
 
     def notify_session_compacted(
@@ -1267,7 +1267,7 @@ class RelaySessionCoordinator:
                     session.rotate_pending = True
         except Exception:  # noqa: BLE001 - telemetry must never block compaction
             logger.warning(
-                "Hermes Relay compaction notification failed", exc_info=True
+                "Aakalan Agent Relay compaction notification failed", exc_info=True
             )
 
     def has_active_turn(self, *, profile_key: str, session_id: str) -> bool:
@@ -1338,7 +1338,7 @@ class RelaySessionCoordinator:
                         pending_request_id,
                         pending_handle,
                     )
-            logger.warning("Hermes Relay logical LLM finalization failed: %s", failure)
+            logger.warning("Aakalan Agent Relay logical LLM finalization failed: %s", failure)
             break
 
     @staticmethod
@@ -1463,7 +1463,7 @@ def emit_mark(
     data: Any = None,
     metadata: Any = None,
 ) -> bool:
-    """Emit a fail-open Relay mark under a Hermes session."""
+    """Emit a fail-open Relay mark under a Aakalan Agent session."""
     runtime = get_runtime(create=False)
     if runtime is None:
         return False
@@ -1475,7 +1475,7 @@ def emit_mark(
             metadata=metadata,
         )
     except Exception:
-        logger.warning("Hermes Relay mark failed: %s", name, exc_info=True)
+        logger.warning("Aakalan Agent Relay mark failed: %s", name, exc_info=True)
         return False
 
 
@@ -1485,7 +1485,7 @@ def apply_tool_request_intercepts(
     tool_name: str,
     args: dict[str, Any],
 ) -> dict[str, Any]:
-    """Return Relay-rewritten arguments at Hermes's authorization boundary."""
+    """Return Relay-rewritten arguments at Aakalan Agent's authorization boundary."""
     if not session_id:
         return args
     runtime = get_runtime(create=False)
@@ -1499,14 +1499,14 @@ def apply_tool_request_intercepts(
 
 
 def ensure_session(*, session_id: str, **context: Any) -> RelaySession | None:
-    """Create or return the shared Relay session used by Hermes core."""
+    """Create or return the shared Relay session used by Aakalan Agent core."""
     runtime = get_runtime()
     if runtime is None:
         return None
     try:
         return runtime.ensure_session({"session_id": session_id, **context})
     except Exception:
-        logger.warning("Hermes Relay session initialization failed", exc_info=True)
+        logger.warning("Aakalan Agent Relay session initialization failed", exc_info=True)
         return None
 
 
@@ -1516,15 +1516,15 @@ def run_in_session(
     *args: Any,
     **kwargs: Any,
 ) -> Any:
-    """Run a scope, LLM, or tool API against a shared Hermes session."""
+    """Run a scope, LLM, or tool API against a shared Aakalan Agent session."""
     runtime = get_runtime()
     if runtime is None:
-        raise RuntimeError("Hermes Relay runtime is unavailable")
+        raise RuntimeError("Aakalan Agent Relay runtime is unavailable")
     session = runtime.get_session(session_id)
     if session is None:
         session = runtime.ensure_session({"session_id": session_id})
     if session is None:
-        raise RuntimeError("Hermes Relay session is unavailable")
+        raise RuntimeError("Aakalan Agent Relay session is unavailable")
     return runtime.run_in_session(session, callback, *args, **kwargs)
 
 
@@ -1534,15 +1534,15 @@ async def run_in_session_async(
     *args: Any,
     **kwargs: Any,
 ) -> Any:
-    """Await a Relay operation inside a shared Hermes session context."""
+    """Await a Relay operation inside a shared Aakalan Agent session context."""
     runtime = get_runtime()
     if runtime is None:
-        raise RuntimeError("Hermes Relay runtime is unavailable")
+        raise RuntimeError("Aakalan Agent Relay runtime is unavailable")
     session = runtime.get_session(session_id)
     if session is None:
         session = runtime.ensure_session({"session_id": session_id})
     if session is None:
-        raise RuntimeError("Hermes Relay session is unavailable")
+        raise RuntimeError("Aakalan Agent Relay session is unavailable")
     return await runtime.run_in_session_async(session, callback, *args, **kwargs)
 
 
@@ -1579,7 +1579,7 @@ def get_runtime(
     create: bool = True,
     profile_key: str | None = None,
 ) -> RelayRuntime | None:
-    """Return the Relay host for the active Hermes profile."""
+    """Return the Relay host for the active Aakalan Agent profile."""
     host = HOST_REGISTRY.for_profile(profile_key, create=create)
     return host if isinstance(host, RelayRuntime) else None
 
