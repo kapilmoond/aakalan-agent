@@ -233,7 +233,11 @@ function downloadInstallScript(ref, destPath) {
   // ref so local builds can still bootstrap without pretending the all-zero
   // placeholder is a real GitHub commit.
   const scriptName = installScriptName()
-  const url = `https://raw.githubusercontent.com/NousResearch/hermes-agent/${ref}/scripts/${scriptName}`
+  // Aakalan Agent is a named fork. Packaged desktop builds pin a local
+  // commit SHA that exists on kapilmoond/aakalan-agent, not on upstream
+  // NousResearch/hermes-agent — fetching the official raw URL 404s.
+  const installGithubRepo = 'kapilmoond/aakalan-agent'
+  const url = `https://raw.githubusercontent.com/${installGithubRepo}/${ref}/scripts/${scriptName}`
 
   return new Promise((resolve, reject) => {
     fs.mkdirSync(path.dirname(destPath), { recursive: true })
