@@ -26,8 +26,31 @@ interface ErrorBoundaryState {
 const ASSISTANT_UI_LOOKUP_ERROR = /(useClientLookup|tapClient(Lookup|Resource)).*out of bounds/
 const MAX_AUTO_RECOVERIES = 3
 const AUTO_RECOVERY_WINDOW_MS = 5_000
+const AUTO_RELOAD_STORAGE_KEY = 'aakalan-root-crash-reload-at'
+const AUTO_RELOAD_COOLDOWN_MS = 10_000
 
 const isTransientAssistantUiLookupError = (error: Error): boolean => ASSISTANT_UI_LOOKUP_ERROR.test(error.message)
+
+function lastAutoReloadAt(): number {
+  try {
+    return Number(sessionStorage.getItem(AUTO_RELOAD_STORAGE_KEY) || 0)
+  } catch {
+    return 0
+  }
+}
+
+function canAutoReloadWindow(): boolean {
+  const last = lastAutoReloadAt()
+  return !last || Date.now() - last > AUTO_RELOAD_COOLDOWN_MS
+}
+
+function markAutoReloadWindow(): void {
+  try {
+    sessionStorage.setItem(AUTO_RELOAD_STORAGE_KEY, String(Date.now()))
+  } catch {
+    // sessionStorage can be blocked; still attempt the reload.
+  }
+}
 
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   state: ErrorBoundaryState = { error: null }
@@ -74,7 +97,17 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       console.warn(`${tag} auto-recovering from assistant-ui lookup render race`, error.message)
       this.autoRecoveryPending = true
       this.scheduleAutoRecovery()
+      return
     }
+
+    if (this.shouldSilentReload(error)) {
+      markAutoReloadWindow()
+      window.location.reload()
+    }
+  }
+
+  private shouldSilentReload(error: Error): boolean {
+    return this.props.label === 'root' && !isTransientAssistantUiLookupError(error) && canAutoReloadWindow()
   }
 
   componentWillUnmount() {
@@ -125,6 +158,10 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
     if (!error) {
       return this.props.children
+    }
+
+    if (this.shouldSilentReload(error)) {
+      return null
     }
 
     if (this.props.fallback) {

@@ -24,6 +24,7 @@ describe('ErrorBoundary assistant-ui lookup recovery', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     vi.setSystemTime(0)
+    sessionStorage.clear()
     vi.spyOn(console, 'error').mockImplementation(() => undefined)
   })
 
@@ -202,8 +203,10 @@ describe('ErrorBoundary assistant-ui lookup recovery', () => {
     ['a differently cased classifier near-miss', new Error('UseClientLookup: Index 6 out of bounds (length: 2)')],
     ['a non-bounds lookup error', new Error('useClientLookup: Key "missing" not found')],
     ['an unrelated render error', new Error('some unrelated application error')]
-  ])('does not auto-recover %s at root', (_label, error) => {
+  ])('silently reloads the window for %s at root', (_label, error) => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const reload = vi.fn()
+    vi.stubGlobal('location', { ...window.location, reload })
     const Bomb = makeBomb({ error })
 
     render(
@@ -214,7 +217,27 @@ describe('ErrorBoundary assistant-ui lookup recovery', () => {
 
     act(() => vi.runAllTimers())
 
-    expect(screen.getByRole(RELOAD_WINDOW.role, { name: RELOAD_WINDOW.name })).toBeTruthy()
+    expect(reload).toHaveBeenCalledTimes(1)
+    expect(screen.queryByRole(RELOAD_WINDOW.role, { name: RELOAD_WINDOW.name })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Open logs' })).toBeNull()
     expect(recoveryWarningCount(warnSpy.mock.calls)).toBe(0)
+    vi.unstubAllGlobals()
+  })
+
+  it('shows the crash screen only if a silent reload already failed', () => {
+    sessionStorage.setItem('aakalan-root-crash-reload-at', '1')
+    const Bomb = makeBomb({ error: new Error('Minified React error #31') })
+
+    render(
+      <RootErrorBoundary>
+        <Bomb />
+      </RootErrorBoundary>
+    )
+
+    act(() => vi.runAllTimers())
+
+    expect(screen.getByRole(RELOAD_WINDOW.role, { name: RELOAD_WINDOW.name })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy()
   })
 })

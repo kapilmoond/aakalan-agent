@@ -73,6 +73,7 @@ from hermes_cli.config import (
     resolve_cron_model_drift_defaults,
     save_config,
     save_env_value,
+    get_env_value,
     remove_env_value,
     custom_endpoint_key_env,
     check_config_version,
@@ -4275,7 +4276,14 @@ def _validate_messaging_env_value(platform_id: str, key: str, value: str) -> Non
             )
 
 
-def _spawn_gateway_restart(profile: Optional[str] = None) -> Tuple[subprocess.Popen, bool]:
+_GATEWAY_RESTART_FORCE_GEN = 0
+
+
+def _spawn_gateway_restart(
+    profile: Optional[str] = None,
+    *,
+    force_new: bool = False,
+) -> Tuple[subprocess.Popen, bool]:
     """Spawn ``hermes gateway restart``, reusing an in-flight restart.
 
     Multiple dashboard paths can request a restart in quick succession
@@ -4284,6 +4292,11 @@ def _spawn_gateway_restart(profile: Optional[str] = None) -> Tuple[subprocess.Po
     concurrent ``hermes gateway restart`` children race each other on the
     manual kill-and-start path, so reuse the live one instead.
 
+    ``force_new=True`` is for env-changing paths (WhatsApp apply/disconnect).
+    Reusing a restart that started *before* ``WHATSAPP_ENABLED`` was flipped
+    boots a gateway that never attaches WhatsApp while the UI still says
+    connected.
+
     Before spawning, sweep for orphaned gateway processes whose parent has
     exited (e.g. desktop-app restarts leaving a reparented gateway child
     under launchd/PPID=1).  Without this the orphan keeps its platform
@@ -4291,6 +4304,8 @@ def _spawn_gateway_restart(profile: Optional[str] = None) -> Tuple[subprocess.Po
 
     Returns ``(proc, reused)``.
     """
+    global _GATEWAY_RESTART_FORCE_GEN
+
     # Reap orphaned gateways before spawning a new one (#77276).
     try:
         from hermes_cli.gateway import _reap_unsupervised_gateway_orphans
@@ -4303,9 +4318,34 @@ def _spawn_gateway_restart(profile: Optional[str] = None) -> Tuple[subprocess.Po
     existing = _ACTION_PROCS.get("gateway-restart")
     if existing is not None and existing.poll() is None:
         existing_command = _ACTION_COMMANDS.get("gateway-restart")
-        if existing_command is None or existing_command == tuple(subcommand):
+        same_command = existing_command is None or existing_command == tuple(subcommand)
+        if same_command and not force_new:
             return existing, True
-        raise RuntimeError("gateway restart already in progress for another profile")
+        if not same_command and not force_new:
+            raise RuntimeError("gateway restart already in progress for another profile")
+        _GATEWAY_RESTART_FORCE_GEN += 1
+        my_gen = _GATEWAY_RESTART_FORCE_GEN
+
+        def _followup() -> None:
+            try:
+                existing.wait(timeout=90)
+            except Exception:
+                pass
+            if _GATEWAY_RESTART_FORCE_GEN != my_gen:
+                return
+            _ACTION_PROCS.pop("gateway-restart", None)
+            _ACTION_COMMANDS.pop("gateway-restart", None)
+            try:
+                _spawn_hermes_action(subcommand, "gateway-restart")
+            except Exception:
+                _log.exception("Follow-up gateway restart after env change failed")
+
+        threading.Thread(
+            target=_followup,
+            daemon=True,
+            name="gateway-restart-followup",
+        ).start()
+        return existing, True
     return _spawn_hermes_action(subcommand, "gateway-restart"), False
 
 
@@ -8640,6 +8680,34 @@ def _gateway_platform_config(platform_id: str):
     return config, platform, platform_config
 
 
+def _effective_messaging_platform_state(
+    *,
+    enabled: bool,
+    configured: bool,
+    gateway_running: bool,
+    runtime_state: str | None,
+    runtime_gateway_state: str | None,
+) -> str:
+    """Public Channels/status pill for one platform.
+
+    A stale runtime snapshot can still say ``connected`` after the gateway
+    process has exited (update drain, apply restart, crash). The UI must
+    not stay green in that window — that is how WhatsApp looks linked
+    while nothing is polling or sending replies.
+    """
+    if not enabled:
+        return "disabled"
+    if not configured:
+        return "not_configured"
+    if not gateway_running:
+        if runtime_gateway_state == "startup_failed":
+            return "startup_failed"
+        return "gateway_stopped"
+    if not runtime_state:
+        return "pending_restart"
+    return str(runtime_state)
+
+
 def _messaging_platform_payload(
     entry: dict[str, Any],
     env_on_disk: dict[str, str],
@@ -8736,25 +8804,17 @@ def _messaging_platform_payload(
             )
             home_channel = None
 
-    state = (
-        runtime_platform.get("state") if isinstance(runtime_platform, dict) else None
-    )
     runtime_gateway_state = runtime.get("gateway_state") if isinstance(runtime, dict) else None
     runtime_gateway_error = runtime.get("exit_reason") if isinstance(runtime, dict) else None
-    if not enabled:
-        state = "disabled"
-    elif not configured:
-        state = "not_configured"
-    elif gateway_running and not state:
-        state = "pending_restart"
-    elif (
-        not gateway_running
-        and not state
-        and runtime_gateway_state == "startup_failed"
-    ):
-        state = "startup_failed"
-    elif not gateway_running and not state:
-        state = "gateway_stopped"
+    state = _effective_messaging_platform_state(
+        enabled=enabled,
+        configured=configured,
+        gateway_running=gateway_running,
+        runtime_state=(
+            runtime_platform.get("state") if isinstance(runtime_platform, dict) else None
+        ),
+        runtime_gateway_state=runtime_gateway_state,
+    )
 
     error_code = (
         runtime_platform.get("error_code")
@@ -9149,9 +9209,38 @@ def _whatsapp_onboarding_payload(pairing_id: str, record: _WhatsAppOnboardingSes
     }
 
 
-def _restart_gateway_after_whatsapp_onboarding(profile: Optional[str] = None) -> dict[str, Any]:
+def _whatsapp_apply_requires_restart(mode: str, allowed_users: str) -> bool:
+    """True when apply must bounce the gateway to pick up new WhatsApp env.
+
+    Re-applying an already-enabled self-chat session (existing creds.json)
+    used to restart every time, which is how Connect left a window with
+    ``No messaging platforms enabled``.
+    """
+    prev_enabled = str(get_env_value("WHATSAPP_ENABLED") or "").strip().lower() in {
+        "true",
+        "1",
+        "yes",
+        "on",
+    }
+    prev_mode = str(get_env_value("WHATSAPP_MODE") or "").strip()
+    prev_allowed = _normalize_whatsapp_allowed_users(get_env_value("WHATSAPP_ALLOWED_USERS") or "")
+    want_allowed = _normalize_whatsapp_allowed_users(allowed_users)
+    if not prev_enabled:
+        return True
+    if prev_mode != mode:
+        return True
+    if want_allowed and prev_allowed != want_allowed:
+        return True
+    return False
+
+
+def _restart_gateway_after_whatsapp_onboarding(
+    profile: Optional[str] = None,
+    *,
+    force_new: bool = False,
+) -> dict[str, Any]:
     try:
-        proc, reused = _spawn_gateway_restart(profile)
+        proc, reused = _spawn_gateway_restart(profile, force_new=force_new)
     except Exception as exc:
         _log.exception("Failed to auto-restart gateway after WhatsApp onboarding")
         return {
@@ -9265,6 +9354,7 @@ async def apply_whatsapp_onboarding(
         record_profile = record.profile
 
     effective_profile = body.profile or profile or record_profile
+    needs_restart = _whatsapp_apply_requires_restart(mode, allowed_users)
     try:
         with _config_profile_scope(effective_profile):
             save_env_value("WHATSAPP_MODE", mode)
@@ -9293,11 +9383,21 @@ async def apply_whatsapp_onboarding(
     with _whatsapp_onboarding_lock:
         _whatsapp_onboarding_sessions.pop(pairing_id, None)
 
-    restart_result = _restart_gateway_after_whatsapp_onboarding(effective_profile)
+    if needs_restart:
+        restart_result = _restart_gateway_after_whatsapp_onboarding(
+            effective_profile,
+            force_new=True,
+        )
+    else:
+        restart_result = {
+            "restart_started": False,
+            "restart_skipped": True,
+            "restart_reason": "already_applied",
+        }
     return {
         "ok": True,
         "platform": "whatsapp",
-        "needs_restart": not restart_result["restart_started"],
+        "needs_restart": bool(needs_restart and not restart_result.get("restart_started")),
         **restart_result,
     }
 
@@ -9329,7 +9429,10 @@ async def disconnect_whatsapp(profile: Optional[str] = None):
         _log.exception("WhatsApp disconnect failed")
         raise HTTPException(status_code=500, detail="Failed to disconnect WhatsApp.") from exc
 
-    restart_result = _restart_gateway_after_whatsapp_onboarding(effective_profile)
+    restart_result = _restart_gateway_after_whatsapp_onboarding(
+        effective_profile,
+        force_new=True,
+    )
     return {
         "ok": True,
         "platform": "whatsapp",

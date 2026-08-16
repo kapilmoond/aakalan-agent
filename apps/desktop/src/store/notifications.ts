@@ -190,11 +190,12 @@ export function notify(input: NotificationInput): string {
 }
 
 export function notifyError(error: unknown, fallback: string): string {
-  const readable = readableError(error, fallback)
+  const fallbackText = typeof fallback === 'string' && fallback.trim() ? fallback : 'Something went wrong'
+  const readable = readableError(error, fallbackText)
 
   return notify({
     kind: 'error',
-    title: fallback,
+    title: fallbackText,
     message: readable.message,
     detail: readable.detail
   })

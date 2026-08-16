@@ -42,7 +42,7 @@ def test_apply_whatsapp_onboarding_saves_pairing_policy(monkeypatch):
     monkeypatch.setattr(
         ws,
         "_restart_gateway_after_whatsapp_onboarding",
-        lambda profile=None: {"restart_started": True, "restart_pid": 12345},
+        lambda profile=None, force_new=False: {"restart_started": True, "restart_pid": 12345},
     )
 
     record = ws._WhatsAppOnboardingSession(
@@ -113,6 +113,117 @@ def test_start_whatsapp_onboarding_existing_creds_returns_linked_account(monkeyp
     assert old_proc.terminated is True
     assert ws._whatsapp_onboarding_sessions["existing-creds"].account_phone == "15551234567"
     ws._whatsapp_onboarding_sessions.clear()
+
+
+def test_effective_messaging_state_not_connected_when_gateway_down():
+    from hermes_cli.web_server import _effective_messaging_platform_state
+
+    assert (
+        _effective_messaging_platform_state(
+            enabled=True,
+            configured=True,
+            gateway_running=False,
+            runtime_state="connected",
+            runtime_gateway_state="running",
+        )
+        == "gateway_stopped"
+    )
+    assert (
+        _effective_messaging_platform_state(
+            enabled=True,
+            configured=True,
+            gateway_running=True,
+            runtime_state="connected",
+            runtime_gateway_state="running",
+        )
+        == "connected"
+    )
+
+
+def test_apply_skips_restart_when_whatsapp_already_enabled(monkeypatch):
+    from hermes_cli import web_server as ws
+
+    saved = {}
+    restarts = []
+    monkeypatch.setattr(ws, "save_env_value", lambda key, value: saved.setdefault(key, value))
+    monkeypatch.setattr(ws, "_write_platform_enabled", lambda platform, value: None)
+    monkeypatch.setattr(ws, "get_env_value", lambda key: {
+        "WHATSAPP_ENABLED": "true",
+        "WHATSAPP_MODE": "self-chat",
+        "WHATSAPP_ALLOWED_USERS": "917015854935",
+    }.get(key))
+    monkeypatch.setattr(
+        ws,
+        "_restart_gateway_after_whatsapp_onboarding",
+        lambda profile=None, force_new=False: restarts.append((profile, force_new)) or {
+            "restart_started": True,
+            "restart_pid": 1,
+        },
+    )
+
+    record = ws._WhatsAppOnboardingSession(
+        proc=None,
+        mode="self-chat",
+        allowed_users="917015854935",
+        session_path="/tmp/session",
+        expires_at="2099-01-01T00:00:00Z",
+        expires_at_ts=time.time() + 600,
+        status="connected",
+        account_phone="917015854935",
+    )
+    ws._whatsapp_onboarding_sessions.clear()
+    ws._whatsapp_onboarding_sessions["pairing"] = record
+
+    result = asyncio.run(
+        ws.apply_whatsapp_onboarding(
+            "pairing",
+            ws.WhatsAppOnboardingApply(mode="self-chat", allowed_users="917015854935"),
+        )
+    )
+
+    assert result["ok"] is True
+    assert result.get("restart_skipped") is True
+    assert restarts == []
+
+
+def test_apply_forces_fresh_restart_when_enabling_whatsapp(monkeypatch):
+    from hermes_cli import web_server as ws
+
+    restarts = []
+    monkeypatch.setattr(ws, "save_env_value", lambda key, value: None)
+    monkeypatch.setattr(ws, "_write_platform_enabled", lambda platform, value: None)
+    monkeypatch.setattr(ws, "get_env_value", lambda key: "")
+    monkeypatch.setattr(
+        ws,
+        "_restart_gateway_after_whatsapp_onboarding",
+        lambda profile=None, force_new=False: restarts.append((profile, force_new)) or {
+            "restart_started": True,
+            "restart_pid": 99,
+        },
+    )
+
+    record = ws._WhatsAppOnboardingSession(
+        proc=None,
+        mode="self-chat",
+        allowed_users="917015854935",
+        session_path="/tmp/session",
+        expires_at="2099-01-01T00:00:00Z",
+        expires_at_ts=time.time() + 600,
+        status="connected",
+        account_phone="917015854935",
+    )
+    ws._whatsapp_onboarding_sessions.clear()
+    ws._whatsapp_onboarding_sessions["pairing"] = record
+
+    result = asyncio.run(
+        ws.apply_whatsapp_onboarding(
+            "pairing",
+            ws.WhatsAppOnboardingApply(mode="self-chat", allowed_users="917015854935"),
+        )
+    )
+
+    assert result["ok"] is True
+    assert restarts == [(None, True)]
 
 
 

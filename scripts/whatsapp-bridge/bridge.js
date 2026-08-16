@@ -33,6 +33,7 @@ import qrcode from 'qrcode-terminal';
 import { matchesAllowedUser, parseAllowedUsers } from './allowlist.js';
 import { createOutboundIdTracker } from './outbound_ids.js';
 import { classifyOwnerMessageGate } from './owner_message_gate.js';
+import { isOwnerSelfChat } from './self_chat_gate.js';
 import {
   buildPollPayload,
   createReconnectScheduler,
@@ -546,6 +547,18 @@ async function startSocket() {
       const senderId = msg.key.participant || chatId;
       const isGroup = chatId.endsWith('@g.us');
       const senderNumber = senderId.replace(/@.*/, '');
+      const myNumber = (sock.user?.id || '').replace(/:.*@/, '@').replace(/@.*/, '');
+      const myLid = (sock.user?.lid || '').replace(/:.*@/, '@').replace(/@.*/, '');
+      const ownerSelfChat = isOwnerSelfChat({
+        fromMe: !!msg.key.fromMe,
+        isGroup,
+        chatId,
+        senderId,
+        myNumber,
+        myLid,
+        allowedUsers: ALLOWED_USERS,
+        sessionDir: SESSION_DIR,
+      });
       emitDebugEvent({
         stage: 'upsert',
         type,
@@ -602,22 +615,15 @@ async function startSocket() {
           }
           fromOwner = true;
         } else {
-          // Self-chat mode: only allow messages in the user's own self-chat.
-          // WhatsApp now uses LID (Linked Identity Device) format: 67427329167522@lid
-          // AND classic format: 34652029134@s.whatsapp.net
-          // sock.user has both: { id: "number:10@s.whatsapp.net", lid: "lid_number:10@lid" }
-          const myNumber = (sock.user?.id || '').replace(/:.*@/, '@').replace(/@.*/, '');
-          const myLid = (sock.user?.lid || '').replace(/:.*@/, '@').replace(/@.*/, '');
-          const chatNumber = chatId.replace(/@.*/, '');
-          const isSelfChat = (myNumber && chatNumber === myNumber) || (myLid && chatNumber === myLid);
+          // Self-chat mode: only the owner's Message-yourself thread.
           emitDebugEvent({
             stage: 'self_chat_check',
-            matched: !!isSelfChat,
+            matched: !!ownerSelfChat,
             chatId: redactWhatsAppId(chatId),
             accountId: redactWhatsAppId(sock.user?.id),
             accountLid: redactWhatsAppId(sock.user?.lid),
           });
-          if (!isSelfChat) {
+          if (!ownerSelfChat) {
             emitDebugEvent({
               stage: 'ignored',
               reason: 'self_chat_mismatch',
@@ -629,24 +635,24 @@ async function startSocket() {
         }
       }
 
-      // Handle !fromMe messages (from other people) based on mode.
-      // Self-chat mode only responds to the user's own messages to
-      // themselves — stranger DMs / group pings must never reach the
-      // Python gateway, otherwise a pairing-code reply fires in response
-      // to arbitrary incoming messages (#8389).
+      // Handle !fromMe messages based on mode.
+      // Self-chat still blocks stranger DMs / group pings (#8389), but must
+      // accept the owner's own Message-yourself when WhatsApp delivers it
+      // as a normal inbound (fromMe=false + owner LID/phone).
       if (!msg.key.fromMe) {
         if (WHATSAPP_MODE === 'self-chat') {
-          try {
-            console.log(JSON.stringify({
-              event: 'ignored',
-              reason: 'self_chat_mode_rejects_non_self',
-              chatId,
-              senderId,
-            }));
-          } catch {}
-          continue;
-        }
-        if (WHATSAPP_DM_POLICY !== 'pairing' && !matchesAllowedUser(senderId, ALLOWED_USERS, SESSION_DIR)) {
+          if (!ownerSelfChat) {
+            try {
+              console.log(JSON.stringify({
+                event: 'ignored',
+                reason: 'self_chat_mode_rejects_non_self',
+                chatId,
+                senderId,
+              }));
+            } catch {}
+            continue;
+          }
+        } else if (WHATSAPP_DM_POLICY !== 'pairing' && !matchesAllowedUser(senderId, ALLOWED_USERS, SESSION_DIR)) {
           try {
             console.log(JSON.stringify({
               event: 'ignored',

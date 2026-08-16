@@ -92,7 +92,7 @@ export function WhatsAppQuickConnect({
       await onChanged()
     } catch (error) {
       setPhase('idle')
-      notifyError('WhatsApp', error)
+      notifyError(error, 'Could not finish WhatsApp setup.')
     } finally {
       setBusy(false)
     }
@@ -113,7 +113,7 @@ export function WhatsAppQuickConnect({
     } catch (error) {
       setPhase('idle')
       setBusy(false)
-      notifyError('WhatsApp', error)
+      notifyError(error, 'Could not start WhatsApp setup.')
     }
   }
 
@@ -139,16 +139,11 @@ export function WhatsAppQuickConnect({
     setBusy(true)
     try {
       await disconnectWhatsApp()
-      setPhase('idle')
-      setAccount(null)
-      setHint('Disconnected. Click Connect WhatsApp when you want it again.')
-      notify({ title: 'WhatsApp disconnected', body: 'This phone is no longer linked.' })
-      await onChanged()
-    } catch (error) {
-      notifyError('WhatsApp', error)
-    } finally {
-      setBusy(false)
+    } catch {
+      // Gateway restarts on disconnect. Reload either way so the client
+      // never sees the crash overlay / Reload / Open logs buttons.
     }
+    window.location.reload()
   }
 
   return (
