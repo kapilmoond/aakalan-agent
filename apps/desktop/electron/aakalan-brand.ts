@@ -8,7 +8,7 @@ export const AAKALAN_COMPANY = 'Aaklan Infra Consultancy'
 export const AAKALAN_WEBSITE = 'https://aakalaninfra.com'
 
 export const AAKALAN_GITHUB_OWNER = 'kapilmoond'
-export const AAKALAN_GITHUB_REPO = 'aakalan-cli'
+export const AAKALAN_GITHUB_REPO = 'aakalan-cli1'
 export const AAKALAN_GITHUB_HTTPS = `https://github.com/${AAKALAN_GITHUB_OWNER}/${AAKALAN_GITHUB_REPO}.git`
 export const AAKALAN_GITHUB_CANONICAL = `github.com/${AAKALAN_GITHUB_OWNER}/${AAKALAN_GITHUB_REPO}`.toLowerCase()
 export const AAKALAN_GITHUB_RAW = `https://raw.githubusercontent.com/${AAKALAN_GITHUB_OWNER}/${AAKALAN_GITHUB_REPO}`

@@ -28,12 +28,12 @@ import {
 } from './update-remote'
 
 test('canonicalGitHubRemote normalizes SSH and HTTPS forms to the same value', () => {
-  assert.equal(canonicalGitHubRemote('git@github.com:kapilmoond/aakalan-cli.git'), OFFICIAL_REPO_CANONICAL)
-  assert.equal(canonicalGitHubRemote('git@github.com:kapilmoond/aakalan-cli'), OFFICIAL_REPO_CANONICAL)
-  assert.equal(canonicalGitHubRemote('ssh://git@github.com/kapilmoond/aakalan-cli.git'), OFFICIAL_REPO_CANONICAL)
-  assert.equal(canonicalGitHubRemote('https://github.com/kapilmoond/aakalan-cli.git'), OFFICIAL_REPO_CANONICAL)
-  assert.equal(canonicalGitHubRemote('git@github.com:KapilMoond/aakalan-cli.git'), OFFICIAL_REPO_CANONICAL)
-  assert.equal(canonicalGitHubRemote('https://github.com/kapilmoond/aakalan-cli/'), OFFICIAL_REPO_CANONICAL)
+  assert.equal(canonicalGitHubRemote('git@github.com:kapilmoond/aakalan-cli1.git'), OFFICIAL_REPO_CANONICAL)
+  assert.equal(canonicalGitHubRemote('git@github.com:kapilmoond/aakalan-cli1'), OFFICIAL_REPO_CANONICAL)
+  assert.equal(canonicalGitHubRemote('ssh://git@github.com/kapilmoond/aakalan-cli1.git'), OFFICIAL_REPO_CANONICAL)
+  assert.equal(canonicalGitHubRemote('https://github.com/kapilmoond/aakalan-cli1.git'), OFFICIAL_REPO_CANONICAL)
+  assert.equal(canonicalGitHubRemote('git@github.com:KapilMoond/aakalan-cli1.git'), OFFICIAL_REPO_CANONICAL)
+  assert.equal(canonicalGitHubRemote('https://github.com/kapilmoond/aakalan-cli1/'), OFFICIAL_REPO_CANONICAL)
 })
 
 test('canonicalGitHubRemote is empty for falsy input', () => {
@@ -43,18 +43,18 @@ test('canonicalGitHubRemote is empty for falsy input', () => {
 })
 
 test('isSshRemote detects scp-like and ssh:// forms only', () => {
-  assert.equal(isSshRemote('git@github.com:kapilmoond/aakalan-cli.git'), true)
-  assert.equal(isSshRemote('ssh://git@github.com/kapilmoond/aakalan-cli.git'), true)
-  assert.equal(isSshRemote('https://github.com/kapilmoond/aakalan-cli.git'), false)
+  assert.equal(isSshRemote('git@github.com:kapilmoond/aakalan-cli1.git'), true)
+  assert.equal(isSshRemote('ssh://git@github.com/kapilmoond/aakalan-cli1.git'), true)
+  assert.equal(isSshRemote('https://github.com/kapilmoond/aakalan-cli1.git'), false)
   assert.equal(isSshRemote(''), false)
   assert.equal(isSshRemote(null), false)
 })
 
 test('isOfficialSshRemote is true only for the official repo over SSH', () => {
-  assert.equal(isOfficialSshRemote('git@github.com:kapilmoond/aakalan-cli.git'), true)
-  assert.equal(isOfficialSshRemote('git@github.com:kapilmoond/aakalan-cli'), true)
-  assert.equal(isOfficialSshRemote('ssh://git@github.com/kapilmoond/aakalan-cli.git'), true)
-  assert.equal(isOfficialSshRemote('git@github.com:KapilMoond/aakalan-cli.git'), true)
+  assert.equal(isOfficialSshRemote('git@github.com:kapilmoond/aakalan-cli1.git'), true)
+  assert.equal(isOfficialSshRemote('git@github.com:kapilmoond/aakalan-cli1'), true)
+  assert.equal(isOfficialSshRemote('ssh://git@github.com/kapilmoond/aakalan-cli1.git'), true)
+  assert.equal(isOfficialSshRemote('git@github.com:KapilMoond/aakalan-cli1.git'), true)
 })
 
 test('isOfficialSshRemote does NOT match forks, other hosts, or HTTPS', () => {
@@ -62,7 +62,7 @@ test('isOfficialSshRemote does NOT match forks, other hosts, or HTTPS', () => {
   // not the official upstream, so the SSH-avoidance swap must not apply.
   assert.equal(isOfficialSshRemote('git@github.com:someuser/aakalan-cli.git'), false)
   assert.equal(isOfficialSshRemote('git@gitlab.com:kapilmoond/aakalan-cli.git'), false)
-  assert.equal(isOfficialSshRemote('https://github.com/kapilmoond/aakalan-cli.git'), false)
+  assert.equal(isOfficialSshRemote('https://github.com/kapilmoond/aakalan-cli1.git'), false)
   assert.equal(isOfficialSshRemote(''), false)
   assert.equal(isOfficialSshRemote(null), false)
 })

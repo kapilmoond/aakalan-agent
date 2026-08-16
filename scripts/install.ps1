@@ -5,7 +5,7 @@
 # Uses uv for fast Python provisioning and package management.
 #
 # Usage:
-#   iex (irm https://raw.githubusercontent.com/kapilmoond/aakalan-cli/main/scripts/install.ps1)
+#   iex (irm https://raw.githubusercontent.com/kapilmoond/aakalan-cli1/main/scripts/install.ps1)
 #
 # Or download and run with options:
 #   .\install.ps1 -NoVenv -SkipSetup
@@ -374,8 +374,8 @@ $script:ResolvedPathReport = @{
 # Configuration
 # ============================================================================
 
-$RepoUrlSsh = "git@github.com:kapilmoond/aakalan-cli.git"
-$RepoUrlHttps = "https://github.com/kapilmoond/aakalan-cli.git"
+$RepoUrlSsh = "git@github.com:kapilmoond/aakalan-cli1.git"
+$RepoUrlHttps = "https://github.com/kapilmoond/aakalan-cli1.git"
 $PythonVersion = "3.11"
 # Minor versions the installer accepts when the requested $PythonVersion isn't
 # available, in preference order.  uv discovers both uv-managed and system
@@ -2272,13 +2272,13 @@ function Install-Repository {
                 # for.  GitHub supports archive URLs for commits, tags, and
                 # branches; we honour Commit > Tag > Branch.
                 if ($Commit) {
-                    $zipUrl = "https://github.com/kapilmoond/aakalan-cli/archive/$Commit.zip"
+                    $zipUrl = "https://github.com/kapilmoond/aakalan-cli1/archive/$Commit.zip"
                     $zipLabel = $Commit
                 } elseif ($Tag) {
-                    $zipUrl = "https://github.com/kapilmoond/aakalan-cli/archive/refs/tags/$Tag.zip"
+                    $zipUrl = "https://github.com/kapilmoond/aakalan-cli1/archive/refs/tags/$Tag.zip"
                     $zipLabel = $Tag
                 } else {
-                    $zipUrl = "https://github.com/kapilmoond/aakalan-cli/archive/refs/heads/$Branch.zip"
+                    $zipUrl = "https://github.com/kapilmoond/aakalan-cli1/archive/refs/heads/$Branch.zip"
                     $zipLabel = $Branch
                 }
                 $zipPath = "$env:TEMP\hermes-agent-$zipLabel.zip"
