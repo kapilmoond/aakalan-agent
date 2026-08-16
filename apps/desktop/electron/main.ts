@@ -647,16 +647,24 @@ function resolveHermesHome() {
   }
 
   if (IS_WINDOWS && process.env.LOCALAPPDATA) {
-    const localappdata = path.join(process.env.LOCALAPPDATA, 'hermes')
+    const aakalanHome = path.join(process.env.LOCALAPPDATA, 'aakalan')
+    const hermesHome = path.join(process.env.LOCALAPPDATA, 'hermes')
     const legacy = path.join(app.getPath('home'), '.hermes')
 
-    // Migrate transparently to LOCALAPPDATA, but honour an existing legacy
-    // ~/.hermes setup (no LOCALAPPDATA install yet) so users don't lose state.
-    if (!directoryExists(localappdata) && directoryExists(legacy)) {
+    if (directoryExists(aakalanHome)) {
+      return aakalanHome
+    }
+
+    // Keep an already-installed Kapil/dev Hermes home working.
+    if (directoryExists(hermesHome)) {
+      return hermesHome
+    }
+
+    if (directoryExists(legacy)) {
       return legacy
     }
 
-    return localappdata
+    return aakalanHome
   }
 
   return path.join(app.getPath('home'), '.hermes')
@@ -673,7 +681,11 @@ function pathWithHermesManagedNode(...entries) {
 // ACTIVE_HERMES_ROOT — the canonical mutable Hermes install. Same path
 // install.ps1 / install.sh use, so a desktop-only user and a CLI-only user end
 // up with identical layouts and can share one install.
-const ACTIVE_HERMES_ROOT = path.join(HERMES_HOME, 'hermes-agent')
+const ACTIVE_HERMES_ROOT = directoryExists(path.join(HERMES_HOME, 'aakalan-cli'))
+  ? path.join(HERMES_HOME, 'aakalan-cli')
+  : directoryExists(path.join(HERMES_HOME, 'hermes-agent'))
+    ? path.join(HERMES_HOME, 'hermes-agent')
+    : path.join(HERMES_HOME, 'aakalan-cli')
 // VENV_ROOT — venv lives inside the repo, exactly like install.ps1 does it.
 const VENV_ROOT = path.join(ACTIVE_HERMES_ROOT, 'venv')
 // BOOTSTRAP_COMPLETE_MARKER — written by the first-launch bootstrap runner
@@ -1742,18 +1754,19 @@ async function waitForFirstRunSetupChoice(backend) {
     return 'continue-local'
   }
 
+  // Client product: always install locally. No cloud / remote first-run choice.
   updateBootProgress(
     {
       error: null,
-      message: 'Waiting for first-run setup choice',
-      phase: 'bootstrap.choice',
+      message: 'Installing Aakalan Agent locally',
+      phase: 'bootstrap.local',
       progress: 12,
       running: true
     },
     { allowDecrease: true }
   )
-
-  return gate.wait(backend)
+  gate.continueLocal()
+  return 'continue-local'
 }
 
 function continueFirstRunLocalBootstrap() {
@@ -4281,7 +4294,7 @@ function resolveHermesBackend(backendArgs) {
         rememberLog(`Ignoring Windows Aakalan Agent override under WSL: ${hermesOverride}`)
       }
     } else {
-      hermesCommand = findOnPath('hermes')
+      hermesCommand = findOnPath('aakalan') || findOnPath('hermes')
     }
 
     if (hermesCommand) {

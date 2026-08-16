@@ -1,5 +1,6 @@
-import { type CSSProperties, useState } from 'react'
+import { useState } from 'react'
 
+import { BrandMark } from '@/components/brand-mark'
 import { capitalize, normalize } from '@/lib/text'
 
 import introCopyJsonl from './intro-copy.jsonl?raw'
@@ -22,24 +23,24 @@ const NEUTRAL_PERSONALITIES = new Set(['', 'default', 'none', 'neutral'])
 
 const FALLBACK_COPY: IntroCopy[] = [
   {
-    headline: 'What are we moving today?',
-    body: "Send a bug, branch, plan, or rough idea. I'll inspect the repo and turn it into the next concrete step."
+    headline: 'Ready when you are.',
+    body: 'Ask, attach a file, or drop a path. Aakalan will search, draft, and get the work done.'
   },
   {
-    headline: "What's on your mind?",
-    body: "Bring the code, question, or stuck part. I'll read the room before making changes."
+    headline: 'Your work, handled.',
+    body: 'Give the task in plain language. I will inspect first, then act with a clear next step.'
   },
   {
-    headline: 'What should Aakalan Agent look at?',
-    body: "Send the task, failing path, or half-formed plan. I'll help turn it into action."
+    headline: 'What should we finish today?',
+    body: 'A letter, a search, a plan, or a stuck file — send it and I will take it forward.'
   },
   {
-    headline: 'Where should we start?',
-    body: "Bring the problem, goal, or file. I'll inspect first and keep the next step concrete."
+    headline: 'Start with the real problem.',
+    body: 'Drop the context you have. I will sort it into a plan or a finished result.'
   },
   {
-    headline: 'What needs attention?',
-    body: "Send the context you have. I'll help sort it into a plan or a fix."
+    headline: 'Confidence, then action.',
+    body: 'I will check the facts, then write, search, or build — without guessing.'
   }
 ]
 
@@ -118,24 +119,8 @@ function fallbackCopyForPersonality(personalityKey: string): IntroCopy[] {
 
   return [
     {
-      headline: `${label} mode is on. What should we work on?`,
-      body: "Send the task, file, or rough idea. I'll use your configured voice and keep the work grounded in this repo."
-    },
-    {
-      headline: `What does ${label} Aakalan Agent need to see?`,
-      body: "Bring the context or the stuck part. I'll adapt to your configured personality."
-    },
-    {
       headline: `${label} mode is ready.`,
-      body: "Send the problem, file, or idea. I'll follow the personality you've configured."
-    },
-    {
-      headline: `What should ${label} Aakalan Agent tackle?`,
-      body: "Drop the task here. I'll keep the work grounded in the repo."
-    },
-    {
-      headline: 'Where should we begin?',
-      body: `Give me the context and I'll answer in ${label} mode.`
+      body: 'Send the task, file, or idea. I will keep the work grounded and move it forward.'
     }
   ]
 }
@@ -143,8 +128,6 @@ function fallbackCopyForPersonality(personalityKey: string): IntroCopy[] {
 function pickCopy(copies: IntroCopy[], seed = 0): IntroCopy {
   return copies[Math.abs(seed) % copies.length] || FALLBACK_COPY[0]
 }
-
-const WORDMARK = 'AAKALAN AGENT'
 
 function resolveCopy(personality?: string, seed?: number): IntroCopy {
   const personalityKey = normalizeKey(personality)
@@ -162,22 +145,26 @@ export function Intro({ personality, seed }: IntroProps) {
 
   return (
     <div
-      className="pointer-events-none flex w-full min-w-0 flex-col items-center justify-center px-0.5 py-6 text-center text-muted-foreground sm:px-6 lg:px-8"
+      className="pointer-events-none flex w-full min-w-0 flex-col items-center justify-center px-6 py-10 text-center"
       data-slot="aui_intro"
     >
-      <div className="w-full min-w-0">
-        <p
-          aria-label={WORDMARK}
-          className="fit-text mx-auto mb-1 w-[calc(100%-1rem)] font-['Collapse'] font-bold uppercase leading-[0.9] tracking-[0.08em] text-midground mix-blend-plus-lighter dark:text-foreground/90"
-          style={{ '--fit-min': '2.75rem' } as CSSProperties}
-        >
-          <span>
-            <span>{WORDMARK}</span>
-          </span>
-          <span aria-hidden="true">{WORDMARK}</span>
+      <div className="flex max-w-xl flex-col items-center">
+        <BrandMark className="mb-6 size-[5.5rem] rounded-2xl shadow-[0_10px_30px_-12px_rgba(23,50,77,0.35)] ring-1 ring-black/5" />
+
+        <p className="m-0 text-[0.68rem] font-semibold tracking-[0.28em] text-[#ea580c] uppercase">
+          Aaklan Infra Consultancy
         </p>
 
-        <p className="m-0 text-center leading-normal tracking-tight">{copy.body}</p>
+        <h1 className="mt-2 mb-0 font-['Collapse'] text-[clamp(2.4rem,6vw,3.75rem)] font-bold leading-[0.92] tracking-[0.04em] text-[#17324d] uppercase dark:text-[#f8fafc]">
+          Aakalan Agent
+        </h1>
+
+        <span className="mt-4 h-[3px] w-16 rounded-full bg-(--aaklan-strip,linear-gradient(90deg,#c2410c,#ea580c,#f59e0b))" />
+
+        <p className="mt-5 mb-1 text-[1.15rem] font-medium tracking-tight text-[#17324d] dark:text-foreground">
+          {copy.headline}
+        </p>
+        <p className="m-0 max-w-md text-[0.95rem] leading-relaxed text-muted-foreground">{copy.body}</p>
       </div>
     </div>
   )

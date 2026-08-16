@@ -138,8 +138,14 @@ _UPDATE_CHECK_CACHE_SECONDS = 6 * 3600
 # (e.g. nix-built hermes — no local git history to count against).
 UPDATE_AVAILABLE_NO_COUNT = -1
 
-_UPSTREAM_REPO_URL = "https://github.com/NousResearch/hermes-agent.git"
-_OFFICIAL_REPO_CANONICAL = "github.com/nousresearch/hermes-agent"
+try:
+    from aakalan_brand import GITHUB_CANONICAL, GITHUB_HTTPS
+except Exception:  # brand module always ships with this tree
+    GITHUB_HTTPS = "https://github.com/kapilmoond/aakalan-cli.git"
+    GITHUB_CANONICAL = "github.com/kapilmoond/aakalan-cli"
+
+_UPSTREAM_REPO_URL = GITHUB_HTTPS
+_OFFICIAL_REPO_CANONICAL = GITHUB_CANONICAL
 
 
 def _canonical_github_remote(url: str | None) -> str:
@@ -565,7 +571,7 @@ def _compute_git_banner_state(repo_dir: Optional[Path] = None) -> Optional[dict]
     return {"upstream": upstream, "local": local, "ahead": max(ahead, 0)}
 
 
-_RELEASE_URL_BASE = "https://github.com/NousResearch/hermes-agent/releases/tag"
+_RELEASE_URL_BASE = f"https://github.com/{_OFFICIAL_REPO_CANONICAL}/releases/tag"
 _latest_release_cache: Optional[tuple] = None  # (tag, url) once resolved
 
 
@@ -573,8 +579,8 @@ def get_latest_release_tag(repo_dir: Optional[Path] = None) -> Optional[tuple]:
     """Return ``(tag, release_url)`` for the latest git tag, or None.
 
     Local-only — runs ``git describe --tags --abbrev=0`` against the
-    Hermes checkout. Cached per-process. Release URL always points at the
-    canonical NousResearch/hermes-agent repo (forks don't get a link).
+    Aakalan CLI checkout. Cached per-process. Release URL points at the
+    official Aakalan CLI GitHub repo.
     """
     global _latest_release_cache
     if _latest_release_cache is not None:

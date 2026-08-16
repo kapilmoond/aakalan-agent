@@ -1,11 +1,11 @@
 # ============================================================================
-# Hermes Agent Installer for Windows
+# Aakalan Agent CLI Installer for Windows
 # ============================================================================
 # Installation script for Windows (PowerShell).
 # Uses uv for fast Python provisioning and package management.
 #
 # Usage:
-#   iex (irm https://hermes-agent.nousresearch.com/install.ps1)
+#   iex (irm https://raw.githubusercontent.com/kapilmoond/aakalan-cli/main/scripts/install.ps1)
 #
 # Or download and run with options:
 #   .\install.ps1 -NoVenv -SkipSetup
@@ -30,8 +30,8 @@ param(
     # existing tree pass -ForceCommit.
     [switch]$ForceCommit,
     [string]$Tag = "",
-    [string]$HermesHome = $(if ($env:HERMES_HOME) { $env:HERMES_HOME } else { "$env:LOCALAPPDATA\hermes" }),
-    [string]$InstallDir = $(if ($env:HERMES_HOME) { "$env:HERMES_HOME\hermes-agent" } else { "$env:LOCALAPPDATA\hermes\hermes-agent" }),
+    [string]$HermesHome = $(if ($env:AAKALAN_HOME) { $env:AAKALAN_HOME } elseif ($env:HERMES_HOME) { $env:HERMES_HOME } else { "$env:LOCALAPPDATA\aakalan" }),
+    [string]$InstallDir = $(if ($env:AAKALAN_HOME) { "$env:AAKALAN_HOME\aakalan-cli" } elseif ($env:HERMES_HOME) { "$env:HERMES_HOME\aakalan-cli" } else { "$env:LOCALAPPDATA\aakalan\aakalan-cli" }),
 
     # --- Stage protocol (additive; default invocation behaves as before) ----
     # See the "Stage protocol" section near the bottom of the file for the
@@ -374,8 +374,8 @@ $script:ResolvedPathReport = @{
 # Configuration
 # ============================================================================
 
-$RepoUrlSsh = "git@github.com:kapilmoond/aakalan-agent.git"
-$RepoUrlHttps = "https://github.com/kapilmoond/aakalan-agent.git"
+$RepoUrlSsh = "git@github.com:kapilmoond/aakalan-cli.git"
+$RepoUrlHttps = "https://github.com/kapilmoond/aakalan-cli.git"
 $PythonVersion = "3.11"
 # Minor versions the installer accepts when the requested $PythonVersion isn't
 # available, in preference order.  uv discovers both uv-managed and system
@@ -2272,13 +2272,13 @@ function Install-Repository {
                 # for.  GitHub supports archive URLs for commits, tags, and
                 # branches; we honour Commit > Tag > Branch.
                 if ($Commit) {
-                    $zipUrl = "https://github.com/kapilmoond/aakalan-agent/archive/$Commit.zip"
+                    $zipUrl = "https://github.com/kapilmoond/aakalan-cli/archive/$Commit.zip"
                     $zipLabel = $Commit
                 } elseif ($Tag) {
-                    $zipUrl = "https://github.com/kapilmoond/aakalan-agent/archive/refs/tags/$Tag.zip"
+                    $zipUrl = "https://github.com/kapilmoond/aakalan-cli/archive/refs/tags/$Tag.zip"
                     $zipLabel = $Tag
                 } else {
-                    $zipUrl = "https://github.com/kapilmoond/aakalan-agent/archive/refs/heads/$Branch.zip"
+                    $zipUrl = "https://github.com/kapilmoond/aakalan-cli/archive/refs/heads/$Branch.zip"
                     $zipLabel = $Branch
                 }
                 $zipPath = "$env:TEMP\hermes-agent-$zipLabel.zip"

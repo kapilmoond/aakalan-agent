@@ -12,8 +12,10 @@
  * testable without booting Electron (main.ts requires('electron') at load).
  */
 
-const OFFICIAL_REPO_HTTPS_URL = 'https://github.com/NousResearch/hermes-agent.git'
-const OFFICIAL_REPO_CANONICAL = 'github.com/nousresearch/hermes-agent'
+import { AAKALAN_GITHUB_CANONICAL, AAKALAN_GITHUB_HTTPS } from './aakalan-brand'
+
+const OFFICIAL_REPO_HTTPS_URL = AAKALAN_GITHUB_HTTPS
+const OFFICIAL_REPO_CANONICAL = AAKALAN_GITHUB_CANONICAL
 
 // Normalize common GitHub remote URL forms to `host/owner/repo` (lowercased,
 // no trailing slash, no .git suffix) so SSH and HTTPS forms of the same repo

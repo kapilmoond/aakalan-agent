@@ -28,14 +28,12 @@ import {
 } from './update-remote'
 
 test('canonicalGitHubRemote normalizes SSH and HTTPS forms to the same value', () => {
-  assert.equal(canonicalGitHubRemote('git@github.com:NousResearch/hermes-agent.git'), OFFICIAL_REPO_CANONICAL)
-  assert.equal(canonicalGitHubRemote('git@github.com:NousResearch/hermes-agent'), OFFICIAL_REPO_CANONICAL)
-  assert.equal(canonicalGitHubRemote('ssh://git@github.com/NousResearch/hermes-agent.git'), OFFICIAL_REPO_CANONICAL)
-  assert.equal(canonicalGitHubRemote('https://github.com/NousResearch/hermes-agent.git'), OFFICIAL_REPO_CANONICAL)
-  // Case-insensitive: an uppercased owner still canonicalizes to the same repo.
-  assert.equal(canonicalGitHubRemote('git@github.com:nousresearch/hermes-agent.git'), OFFICIAL_REPO_CANONICAL)
-  // Trailing slashes are stripped.
-  assert.equal(canonicalGitHubRemote('https://github.com/NousResearch/hermes-agent/'), OFFICIAL_REPO_CANONICAL)
+  assert.equal(canonicalGitHubRemote('git@github.com:kapilmoond/aakalan-cli.git'), OFFICIAL_REPO_CANONICAL)
+  assert.equal(canonicalGitHubRemote('git@github.com:kapilmoond/aakalan-cli'), OFFICIAL_REPO_CANONICAL)
+  assert.equal(canonicalGitHubRemote('ssh://git@github.com/kapilmoond/aakalan-cli.git'), OFFICIAL_REPO_CANONICAL)
+  assert.equal(canonicalGitHubRemote('https://github.com/kapilmoond/aakalan-cli.git'), OFFICIAL_REPO_CANONICAL)
+  assert.equal(canonicalGitHubRemote('git@github.com:KapilMoond/aakalan-cli.git'), OFFICIAL_REPO_CANONICAL)
+  assert.equal(canonicalGitHubRemote('https://github.com/kapilmoond/aakalan-cli/'), OFFICIAL_REPO_CANONICAL)
 })
 
 test('canonicalGitHubRemote is empty for falsy input', () => {
@@ -45,30 +43,26 @@ test('canonicalGitHubRemote is empty for falsy input', () => {
 })
 
 test('isSshRemote detects scp-like and ssh:// forms only', () => {
-  assert.equal(isSshRemote('git@github.com:NousResearch/hermes-agent.git'), true)
-  assert.equal(isSshRemote('ssh://git@github.com/NousResearch/hermes-agent.git'), true)
-  assert.equal(isSshRemote('https://github.com/NousResearch/hermes-agent.git'), false)
+  assert.equal(isSshRemote('git@github.com:kapilmoond/aakalan-cli.git'), true)
+  assert.equal(isSshRemote('ssh://git@github.com/kapilmoond/aakalan-cli.git'), true)
+  assert.equal(isSshRemote('https://github.com/kapilmoond/aakalan-cli.git'), false)
   assert.equal(isSshRemote(''), false)
   assert.equal(isSshRemote(null), false)
 })
 
 test('isOfficialSshRemote is true only for the official repo over SSH', () => {
-  assert.equal(isOfficialSshRemote('git@github.com:NousResearch/hermes-agent.git'), true)
-  assert.equal(isOfficialSshRemote('git@github.com:NousResearch/hermes-agent'), true)
-  assert.equal(isOfficialSshRemote('ssh://git@github.com/NousResearch/hermes-agent.git'), true)
-  // Case-insensitive owner/repo match.
-  assert.equal(isOfficialSshRemote('git@github.com:nousresearch/hermes-agent.git'), true)
+  assert.equal(isOfficialSshRemote('git@github.com:kapilmoond/aakalan-cli.git'), true)
+  assert.equal(isOfficialSshRemote('git@github.com:kapilmoond/aakalan-cli'), true)
+  assert.equal(isOfficialSshRemote('ssh://git@github.com/kapilmoond/aakalan-cli.git'), true)
+  assert.equal(isOfficialSshRemote('git@github.com:KapilMoond/aakalan-cli.git'), true)
 })
 
 test('isOfficialSshRemote does NOT match forks, other hosts, or HTTPS', () => {
   // A fork over SSH belongs to the user — fetching it is their own remote,
   // not the official upstream, so the SSH-avoidance swap must not apply.
-  assert.equal(isOfficialSshRemote('git@github.com:someuser/hermes-agent.git'), false)
-  // Same repo name on a different host is not the official repo.
-  assert.equal(isOfficialSshRemote('git@gitlab.com:NousResearch/hermes-agent.git'), false)
-  // HTTPS to the official repo never prompts for SSH/FIDO2, so it keeps the
-  // normal fetch path — must not be flagged as an official SSH remote.
-  assert.equal(isOfficialSshRemote('https://github.com/NousResearch/hermes-agent.git'), false)
+  assert.equal(isOfficialSshRemote('git@github.com:someuser/aakalan-cli.git'), false)
+  assert.equal(isOfficialSshRemote('git@gitlab.com:kapilmoond/aakalan-cli.git'), false)
+  assert.equal(isOfficialSshRemote('https://github.com/kapilmoond/aakalan-cli.git'), false)
   assert.equal(isOfficialSshRemote(''), false)
   assert.equal(isOfficialSshRemote(null), false)
 })

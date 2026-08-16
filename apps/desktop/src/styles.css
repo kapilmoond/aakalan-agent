@@ -153,11 +153,28 @@
   /* Hairline border paired with --shadow-nous on borderless overlays.
      currentColor resolves per-element, so it adapts to text color/theme. */
   --stroke-nous: color-mix(in srgb, currentColor 3%, transparent);
+  --aaklan-navy: #17324d;
+  --aaklan-orange: #ea580c;
+  --aaklan-orange-soft: #f97316;
+  --aaklan-orange-deep: #c2410c;
+  --aaklan-strip: linear-gradient(90deg, #c2410c 0%, #ea580c 42%, #f59e0b 100%);
   --shadow-lg:
     inset 0 0.0625rem 0 color-mix(in srgb, #fff 28%, transparent),
     0 0 0 0.0625rem color-mix(in srgb, var(--dt-foreground) 8%, transparent),
     0 0.75rem 2rem color-mix(in srgb, #000 12%, transparent);
   --shadow-composer: 0 0.0625rem 0.125rem color-mix(in srgb, #000 5%, transparent);
+}
+
+#root::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 200;
+  height: 3px;
+  pointer-events: none;
+  background: var(--aaklan-strip);
 }
 
 @layer base {
