@@ -1,7 +1,7 @@
 """
 Doctor command for hermes CLI.
 
-Diagnoses issues with Aakalan Agent Agent setup.
+Diagnoses issues with Aakalan Agent setup.
 """
 
 import os
@@ -1655,7 +1655,7 @@ def run_doctor(args):
         if should_fix:
             soul_path.parent.mkdir(parents=True, exist_ok=True)
             soul_path.write_text(
-                "# Aakalan Agent Agent Persona\n\n"
+                "# Aakalan Agent Persona\n\n"
                 "<!-- Edit this file to customize how Aakalan Agent communicates. -->\n\n"
                 "You are Aakalan Agent, a helpful AI assistant.\n",
                 encoding="utf-8",

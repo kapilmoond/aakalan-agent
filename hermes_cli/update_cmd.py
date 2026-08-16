@@ -774,7 +774,7 @@ def _print_update_completion(message: str) -> None:
 
 
 def _update_via_zip(args, *, had_desktop_app_before_update: bool = False):
-    """Update Aakalan Agent Agent by downloading a ZIP archive.
+    """Update Aakalan Agent by downloading a ZIP archive.
 
     Used on Windows when git file I/O is broken (antivirus, NTFS filter
     drivers causing 'Invalid argument' errors on file creation).
@@ -2662,7 +2662,7 @@ def _ensure_fhs_path_guard() -> None:
 
     path_line = 'export PATH="/usr/local/bin:$PATH"'
     path_comment = (
-        "# Aakalan Agent Agent — ensure /usr/local/bin is on PATH " "(RHEL non-login shells)"
+        "# Aakalan Agent — ensure /usr/local/bin is on PATH " "(RHEL non-login shells)"
     )
     wrote_any = False
     for candidate in (".bashrc", ".bash_profile"):
@@ -4346,7 +4346,7 @@ def _cmd_update_impl(args, gateway_mode: bool):
             logger.debug("Could not read updates.non_interactive_local_changes: %s", exc)
             discard_local_changes = False
 
-    print("⚕ Updating Aakalan Agent Agent...")
+    print("⚕ Updating Aakalan Agent...")
     print()
 
     # On Windows, abort early if another hermes.exe is holding the venv shim

@@ -1,4 +1,4 @@
-"""Anthropic Messages API adapter for Aakalan Agent Agent.
+"""Anthropic Messages API adapter for Aakalan Agent.
 
 Translates between Aakalan Agent's internal OpenAI-style message format and
 Anthropic's Messages API. Follows the same pattern as the codex_responses
@@ -879,7 +879,7 @@ def build_anthropic_client(
         kwargs["api_key"] = api_key
         kwargs["default_headers"] = {
             "HTTP-Referer": "https://hermes-agent.nousresearch.com",
-            "X-Title": "Aakalan Agent Agent",
+            "X-Title": "Aakalan Agent",
             "User-Agent": f"HermesAgent/{_HERMES_VERSION}",
             **( {"anthropic-beta": ",".join(common_betas)} if common_betas else {} )
         }
@@ -926,7 +926,7 @@ def build_anthropic_client(
         # the same set on top of whatever auth branch ran above.
         headers = dict(kwargs.get("default_headers") or {})
         headers.setdefault("HTTP-Referer", "https://hermes-agent.nousresearch.com")
-        headers.setdefault("X-Title", "Aakalan Agent Agent")
+        headers.setdefault("X-Title", "Aakalan Agent")
         headers.setdefault("User-Agent", f"HermesAgent/{_HERMES_VERSION}")
         kwargs["default_headers"] = headers
 
@@ -2958,7 +2958,7 @@ def build_anthropic_kwargs(
         for block in system:
             if isinstance(block, dict) and block.get("type") == "text":
                 text = block.get("text", "")
-                text = text.replace("Aakalan Agent Agent", "Claude Code")
+                text = text.replace("Aakalan Agent", "Claude Code")
                 text = text.replace("Aakalan Agent agent", "Claude Code")
                 text = text.replace("hermes-agent", "claude-code")
                 text = text.replace("Nous Research", "Anthropic")

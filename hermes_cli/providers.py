@@ -1,5 +1,5 @@
 """
-Single source of truth for provider identity in Aakalan Agent Agent.
+Single source of truth for provider identity in Aakalan Agent.
 
 Two data sources, merged at runtime:
 

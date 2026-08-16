@@ -1,4 +1,4 @@
-"""On-demand supply-chain audit for Aakalan Agent Agent installs.
+"""On-demand supply-chain audit for Aakalan Agent installs.
 
 Scans three surfaces a Aakalan Agent user actually controls and we can map to
 upstream advisories without auth or extra binaries:

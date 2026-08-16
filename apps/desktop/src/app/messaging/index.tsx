@@ -430,7 +430,8 @@ export function MessagingView({ setStatusbarItemGroup: _setStatusbarItemGroup, .
 
           <DetailColumn
             actionBar={
-              selected && (
+              selected &&
+              selected.id !== 'whatsapp' && (
                 <PlatformActionBar
                   hasEdits={Object.keys(trimEdits(edits[selected.id] || {})).length > 0}
                   onSave={() => void handleSave(selected)}
@@ -588,6 +589,8 @@ function PlatformDetail({
 
       {platform.error_message && <ErrorBanner>{platform.error_message}</ErrorBanner>}
 
+      {platform.id === 'whatsapp' ? null : (
+      <>
       {/* Pending pairing requests. Rendered only when someone is actually
           waiting — an empty-state card here would be permanent chrome on a
           page that is usually about credentials, not approvals. */}
@@ -745,6 +748,8 @@ function PlatformDetail({
             </div>
           )}
         </section>
+      )}
+      </>
       )}
     </>
   )

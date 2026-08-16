@@ -1,11 +1,11 @@
 """
-Session Insights Engine for Aakalan Agent Agent.
+Session Insights Engine for Aakalan Agent.
 
 Analyzes historical session data from the SQLite state database to produce
 comprehensive usage insights — token consumption, cost estimates, tool usage
 patterns, activity trends, model/platform breakdowns, and session metrics.
 
-Inspired by Claude Code's /insights command, adapted for Aakalan Agent Agent's
+Inspired by Claude Code's /insights command, adapted for Aakalan Agent's
 multi-platform architecture with additional cost estimation and platform
 breakdown capabilities.
 

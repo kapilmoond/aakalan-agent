@@ -1,4 +1,4 @@
-"""``hermes debug`` debug tools for Aakalan Agent Agent.
+"""``hermes debug`` debug tools for Aakalan Agent.
 
 Currently supports:
     hermes debug share    Upload debug report (system info + logs) to a

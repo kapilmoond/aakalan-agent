@@ -254,7 +254,7 @@ def generate_fish(parser: argparse.ArgumentParser) -> str:
     top_cmds_str = " ".join(top_cmds)
 
     lines: list[str] = [
-        "# Aakalan Agent Agent fish completion",
+        "# Aakalan Agent fish completion",
         "# Add to your config:",
         "#   hermes completion fish | source",
         "",

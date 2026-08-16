@@ -630,7 +630,7 @@ class CopilotACPClient:
                     },
                     "clientInfo": {
                         "name": "hermes-agent",
-                        "title": "Aakalan Agent Agent",
+                        "title": "Aakalan Agent",
                         "version": "0.0.0",
                     },
                 },

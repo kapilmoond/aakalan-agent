@@ -1668,7 +1668,7 @@ class GatewaySlashCommandsMixin:
         return EphemeralReply(t("gateway.restart.restarting"))
 
     async def _handle_version_command(self, event: MessageEvent) -> str:
-        """Handle /version — show the running Aakalan Agent Agent version."""
+        """Handle /version — show the running Aakalan Agent version."""
         from hermes_cli.slash_exec import CommandContext, execute_command
 
         return execute_command("version", CommandContext(surface="gateway")).text
@@ -5799,7 +5799,7 @@ class GatewaySlashCommandsMixin:
                 return t("gateway.update.platform_not_messaging")
 
         if is_managed():
-            return f"✗ {format_managed_message('update Aakalan Agent Agent')}"
+            return f"✗ {format_managed_message('update Aakalan Agent')}"
 
         project_root = Path(__file__).parent.parent.resolve()
         git_dir = project_root / '.git'

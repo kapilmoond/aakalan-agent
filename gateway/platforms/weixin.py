@@ -1,7 +1,7 @@
 """
 Weixin platform adapter.
 
-Connects Aakalan Agent Agent to WeChat personal accounts via Tencent's iLink Bot API.
+Connects Aakalan Agent to WeChat personal accounts via Tencent's iLink Bot API.
 
 Design notes:
 - Long-poll ``getupdates`` drives inbound delivery.

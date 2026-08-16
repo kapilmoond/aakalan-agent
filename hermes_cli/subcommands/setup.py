@@ -17,7 +17,7 @@ def build_setup_parser(subparsers, *, cmd_setup: Callable) -> None:
     setup_parser = subparsers.add_parser(
         "setup",
         help="Interactive setup wizard",
-        description="Configure Aakalan Agent Agent with an interactive wizard. "
+        description="Configure Aakalan Agent with an interactive wizard. "
         "Run a specific section: "
         "hermes setup model|tts|terminal|gateway|tools|telemetry|agent",
     )

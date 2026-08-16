@@ -133,6 +133,9 @@ export function WhatsAppQuickConnect({
   }
 
   const disconnect = async () => {
+    if (!window.confirm('Disconnect this WhatsApp? Aakalan will stop reading and sending messages until you connect again.')) {
+      return
+    }
     setBusy(true)
     try {
       await disconnectWhatsApp()
@@ -157,6 +160,13 @@ export function WhatsAppQuickConnect({
             Talk to Aakalan from your own WhatsApp
           </h4>
           <p className="m-0 text-sm leading-relaxed text-muted-foreground">{hint}</p>
+          {phase !== 'connected' && (
+            <ol className="mt-3 mb-0 list-decimal space-y-1 pl-5 text-sm text-muted-foreground">
+              <li>Click Connect WhatsApp</li>
+              <li>On your phone: WhatsApp → Settings → Linked devices → Link a device</li>
+              <li>Scan the QR code here. Only this same phone can message Aakalan.</li>
+            </ol>
+          )}
           {account && phase === 'connected' && (
             <p className="mt-2 mb-0 text-sm font-medium text-[#128C7E]">Linked as {account}</p>
           )}

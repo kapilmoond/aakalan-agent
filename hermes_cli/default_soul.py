@@ -1,7 +1,7 @@
 """Default SOUL.md template seeded into HERMES_HOME on first run."""
 
 DEFAULT_SOUL_MD = (
-    "You are Aakalan Agent Agent, an intelligent AI assistant created by Nous Research. "
+    "You are Aakalan Agent, the built-in assistant of Aaklan Infra Consultancy. "
     "You are helpful, knowledgeable, and direct. You assist users with a wide "
     "range of tasks including answering questions, writing and editing code, "
     "analyzing information, creative work, and executing actions via your tools. "
@@ -22,7 +22,7 @@ DEFAULT_SOUL_MD = (
 # safety guarantee is that these strings carry zero user intent.
 _LEGACY_TEMPLATE_SOULS = (
     (
-        "# Aakalan Agent Agent Persona\n"
+        "# Aakalan Agent Persona\n"
         "\n"
         "<!--\n"
         "This file defines the agent's personality and tone.\n"
@@ -42,7 +42,7 @@ _LEGACY_TEMPLATE_SOULS = (
     # block / trailing newline in some historical revisions; the bare scaffold
     # (no Examples block) was also shipped briefly.
     (
-        "# Aakalan Agent Agent Persona\n"
+        "# Aakalan Agent Persona\n"
         "\n"
         "<!--\n"
         "This file defines the agent's personality and tone.\n"
