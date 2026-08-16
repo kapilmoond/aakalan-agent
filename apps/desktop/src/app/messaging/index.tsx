@@ -39,6 +39,7 @@ import { ListRow } from '../settings/primitives'
 import type { SetStatusbarItemGroup } from '../shell/statusbar-controls'
 
 import { PlatformAvatar } from './platform-icon'
+import { WhatsAppQuickConnect } from './whatsapp-quick-connect'
 
 interface MessagingViewProps extends React.ComponentProps<'section'> {
   setStatusbarItemGroup?: SetStatusbarItemGroup
@@ -446,6 +447,7 @@ export function MessagingView({ setStatusbarItemGroup: _setStatusbarItemGroup, .
                 approving={approving}
                 edits={edits[selected.id] || {}}
                 onApprove={user => void handleApprove(user)}
+                onChanged={() => refreshPlatforms(true)}
                 onClear={key => void handleClear(selected, key)}
                 onEdit={(key, value) =>
                   setEdits(current => ({
@@ -534,6 +536,7 @@ function PlatformDetail({
   onApprove,
   onClear,
   onEdit,
+  onChanged,
   onRevoke,
   pending,
   platform,
@@ -544,6 +547,7 @@ function PlatformDetail({
   edits: Record<string, string>
   onApprove: (user: PairingUser) => void
   onClear: (key: string) => void
+  onChanged: () => Promise<void> | void
   onEdit: (key: string, value: string) => void
   onRevoke: (user: PairingUser) => void
   pending: PairingUser[]
@@ -577,6 +581,10 @@ function PlatformDetail({
           <PlatformHint platform={platform} />
         </div>
       </header>
+
+      {platform.id === 'whatsapp' && (
+        <WhatsAppQuickConnect connected={platform.enabled && platform.state === 'connected'} onChanged={onChanged} />
+      )}
 
       {platform.error_message && <ErrorBanner>{platform.error_message}</ErrorBanner>}
 
@@ -793,7 +801,7 @@ const PLATFORM_INTRO: Record<string, string> = {
   signal:
     'Run a signal-cli REST bridge somewhere reachable, then point Aakalan Agent at the URL and the registered phone number.',
   whatsapp:
-    'Start the WhatsApp bridge that ships with Aakalan Agent, scan the QR code on first run, then enable the platform.',
+    'Click Connect WhatsApp, scan the QR code in Linked devices, and only your own number can message Aakalan.',
   bluebubbles:
     'Run BlueBubbles Server on a Mac with iMessage, expose its API, then point Aakalan Agent at the URL with the server password.',
   homeassistant:

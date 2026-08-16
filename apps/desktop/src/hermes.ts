@@ -1349,6 +1349,58 @@ export function testMessagingPlatform(platformId: string): Promise<MessagingPlat
   })
 }
 
+export type WhatsAppOnboardingStatus = {
+  pairing_id: string
+  status: 'starting' | 'installing' | 'waiting' | 'connected' | 'error' | 'expired' | 'cancelled' | string
+  qr_payload?: null | string
+  expires_at?: string
+  mode?: string
+  allowed_users?: string
+  account_id?: null | string
+  account_name?: null | string
+  account_phone?: null | string
+  error?: null | string
+}
+
+export function startWhatsAppOnboarding(body?: {
+  allowed_users?: string
+  mode?: 'bot' | 'self-chat'
+}): Promise<WhatsAppOnboardingStatus> {
+  return window.hermesDesktop.api<WhatsAppOnboardingStatus>({
+    path: '/api/messaging/whatsapp/onboarding/start',
+    method: 'POST',
+    body: { mode: 'self-chat', ...body }
+  })
+}
+
+export function getWhatsAppOnboarding(pairingId: string): Promise<WhatsAppOnboardingStatus> {
+  return window.hermesDesktop.api<WhatsAppOnboardingStatus>({
+    path: `/api/messaging/whatsapp/onboarding/${encodeURIComponent(pairingId)}`
+  })
+}
+
+export function applyWhatsAppOnboarding(pairingId: string): Promise<{ ok: boolean; needs_restart?: boolean }> {
+  return window.hermesDesktop.api<{ ok: boolean; needs_restart?: boolean }>({
+    path: `/api/messaging/whatsapp/onboarding/${encodeURIComponent(pairingId)}/apply`,
+    method: 'POST',
+    body: { mode: 'self-chat' }
+  })
+}
+
+export function cancelWhatsAppOnboarding(pairingId: string): Promise<{ ok: boolean }> {
+  return window.hermesDesktop.api<{ ok: boolean }>({
+    path: `/api/messaging/whatsapp/onboarding/${encodeURIComponent(pairingId)}`,
+    method: 'DELETE'
+  })
+}
+
+export function disconnectWhatsApp(): Promise<{ ok: boolean; disconnected?: boolean }> {
+  return window.hermesDesktop.api<{ ok: boolean; disconnected?: boolean }>({
+    path: '/api/messaging/whatsapp/disconnect',
+    method: 'POST'
+  })
+}
+
 // -- Pairing (who may DM the bot) --------------------------------------------
 // Unknown DMers get a one-time code and land in `pending` until an admin
 // approves them. Approval grants on the row's `request_id`, never on the code:

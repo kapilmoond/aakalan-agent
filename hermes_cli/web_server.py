@@ -9268,7 +9268,11 @@ async def apply_whatsapp_onboarding(
     try:
         with _config_profile_scope(effective_profile):
             save_env_value("WHATSAPP_MODE", mode)
-            save_env_value("WHATSAPP_DM_POLICY", "pairing")
+            if mode == "self-chat":
+                save_env_value("WHATSAPP_DM_POLICY", "allowlist")
+                save_env_value("WHATSAPP_GROUP_POLICY", "disabled")
+            else:
+                save_env_value("WHATSAPP_DM_POLICY", "pairing")
             if allowed_users:
                 save_env_value("WHATSAPP_ALLOWED_USERS", allowed_users)
             # Blank means "keep the existing allowlist"; explicit clearing
@@ -9306,6 +9310,32 @@ async def cancel_whatsapp_onboarding(pairing_id: str):
         record.status = "cancelled"
         _terminate_whatsapp_pairing(record.proc)
     return {"ok": True}
+
+
+@app.post("/api/messaging/whatsapp/disconnect")
+async def disconnect_whatsapp(profile: Optional[str] = None):
+    """Turn WhatsApp off and forget the linked phone session."""
+    import shutil
+
+    effective_profile = profile
+    try:
+        with _config_profile_scope(effective_profile):
+            save_env_value("WHATSAPP_ENABLED", "false")
+            _write_platform_enabled("whatsapp", False)
+            session_path = _whatsapp_session_path()
+            if session_path.exists():
+                shutil.rmtree(session_path, ignore_errors=True)
+    except Exception as exc:
+        _log.exception("WhatsApp disconnect failed")
+        raise HTTPException(status_code=500, detail="Failed to disconnect WhatsApp.") from exc
+
+    restart_result = _restart_gateway_after_whatsapp_onboarding(effective_profile)
+    return {
+        "ok": True,
+        "platform": "whatsapp",
+        "disconnected": True,
+        **restart_result,
+    }
 
 
 _TELEGRAM_ONBOARDING_DEFAULT_URL = "https://setup.hermes-agent.nousresearch.com"

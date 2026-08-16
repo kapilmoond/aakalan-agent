@@ -827,7 +827,7 @@ def sync_skills(quiet: bool = False) -> dict:
                     copied.append(skill_name)
                     manifest[skill_name] = bundled_hash
                     if not quiet:
-                        print(f"  + {skill_name}")
+                        print(f"  + {_display_skill_name(skill_name)}")
             except (OSError, IOError) as e:
                 if not quiet:
                     print(f"  ! Failed to copy {skill_name}: {e}")
@@ -1388,8 +1388,17 @@ def remove_pristine_bundled_skills(dry_run: bool = False) -> dict:
     }
 
 
+def _display_skill_name(skill_name: str) -> str:
+    aliases = {
+        "hermes-agent": "aakalan-agent",
+        "hermes-agent-skill-authoring": "aakalan-skill-authoring",
+        "inspecting-hermes-desktop-dom": "inspecting-aakalan-desktop-dom",
+    }
+    return aliases.get(skill_name, skill_name)
+
+
 if __name__ == "__main__":
-    print("Syncing bundled skills into ~/.hermes/skills/ ...")
+    print("Syncing bundled skills ...")
     result = sync_skills(quiet=False)
     parts = [
         f"{len(result['copied'])} new",
