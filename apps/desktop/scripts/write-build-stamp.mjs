@@ -15,11 +15,13 @@
  *   }
  *
  * Source preference order:
- *   1. CI env vars ($GITHUB_SHA / $GITHUB_REF_NAME) -- avoid edge cases with
- *      shallow clones, detached HEADs, etc. in CI.
- *   2. Local `git rev-parse` against the parent repo (../..).
- *   3. Fallback stamp for local/personal builds from non-git source trees
- *      (ZIP extract, interrupted clone with no HEAD, etc.).
+ *   1. CI env when this build is of kapilmoond/aakalan-cli1 (or AAKALAN_CLI_SHA).
+ *      Desktop lives in aakalan-agent; that repo's GITHUB_SHA is NOT on
+ *      aakalan-cli1 and must never be used as the install.ps1 GitHub pin.
+ *   2. Live `git ls-remote` of kapilmoond/aakalan-cli1 main — the commit that
+ *      actually hosts scripts/install.ps1 for first-launch bootstrap.
+ *   3. Fallback stamp (all-zero + branch main) so bootstrap fetches
+ *      /main/scripts/install.ps1 instead of a desktop-repo SHA that 404s.
  *
  * Dev / out-of-repo builds without git produce an explicit fallback stamp
  * rather than aborting the whole build.  Bootstrap treats the all-zero
@@ -37,6 +39,7 @@ const STAMP_SCHEMA_VERSION = 1
 /** All-zero placeholder used when no real commit can be resolved. */
 export const FALLBACK_COMMIT = "0000000000000000000000000000000000000000"
 export const FALLBACK_BRANCH = "main"
+export const CLI_GITHUB_REMOTE = "https://github.com/kapilmoond/aakalan-cli1.git"
 
 const DESKTOP_ROOT = resolve(import.meta.dirname, "..")
 const REPO_ROOT = resolve(DESKTOP_ROOT, "..", "..")
@@ -52,14 +55,37 @@ function tryExec(cmd, opts) {
 }
 
 export function fromCI(env = process.env) {
-  const sha = env.GITHUB_SHA
+  const explicit = env.AAKALAN_CLI_SHA
+  const sha = explicit || env.GITHUB_SHA
   if (!sha) return null
-  const branch = env.GITHUB_REF_NAME || env.GITHUB_HEAD_REF || null
+  if (!explicit) {
+    const repo = String(env.GITHUB_REPOSITORY || "")
+    // aakalan-agent (and other desktop) SHAs are not objects on aakalan-cli1.
+    if (!/\/aakalan-cli1$/i.test(repo)) return null
+  }
+  const branch = env.GITHUB_REF_NAME || env.GITHUB_HEAD_REF || FALLBACK_BRANCH
   return {
     commit: sha,
     branch: branch,
     dirty: false, // CI builds from a checkout-of-ref by definition
     source: "ci"
+  }
+}
+
+export function fromCliRemote(
+  execFn = tryExec,
+  remote = CLI_GITHUB_REMOTE,
+  branch = FALLBACK_BRANCH
+) {
+  const out = execFn(`git ls-remote ${remote} refs/heads/${branch}`)
+  if (!out) return null
+  const sha = String(out).trim().split(/\s+/)[0]
+  if (!sha || !/^[0-9a-f]{40}$/i.test(sha)) return null
+  return {
+    commit: sha,
+    branch,
+    dirty: false,
+    source: "cli-remote"
   }
 }
 
@@ -107,7 +133,11 @@ export function resolveStamp({
   execFn = tryExec,
   fallbackBranch = FALLBACK_BRANCH
 } = {}) {
-  return fromCI(env) || fromLocalGit(repoRoot, execFn) || fromFallback(fallbackBranch)
+  return (
+    fromCI(env) ||
+    fromCliRemote(execFn, CLI_GITHUB_REMOTE, fallbackBranch) ||
+    fromFallback(fallbackBranch)
+  )
 }
 
 export function isFallbackCommit(commit) {

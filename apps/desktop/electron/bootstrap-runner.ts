@@ -200,7 +200,32 @@ function installedAgentInstallScript(hermesHome) {
     return null
   }
 
-  const candidate = path.join(hermesHome, 'hermes-agent', 'scripts', installScriptName())
+  const candidates = [
+    path.join(hermesHome, 'aakalan-cli', 'scripts', installScriptName()),
+    path.join(hermesHome, 'hermes-agent', 'scripts', installScriptName())
+  ]
+
+  for (const candidate of candidates) {
+    try {
+      fs.accessSync(candidate, fs.constants.R_OK)
+
+      return candidate
+    } catch {
+      // try the next layout
+    }
+  }
+
+  return null
+}
+
+function bundledInstallScript() {
+  const resources = typeof process !== 'undefined' ? process.resourcesPath : ''
+
+  if (!resources) {
+    return null
+  }
+
+  const candidate = path.join(resources, 'scripts', installScriptName())
 
   try {
     fs.accessSync(candidate, fs.constants.R_OK)
@@ -285,7 +310,9 @@ function downloadInstallScript(ref, destPath) {
             void 0
           }
 
-          reject(new Error(`Failed to download ${scriptName}: HTTP ${res.statusCode} from ${url}`))
+          const err = new Error(`Failed to download ${scriptName}: HTTP ${res.statusCode} from ${url}`)
+          err.statusCode = res.statusCode
+          reject(err)
 
           return
         }
@@ -323,7 +350,8 @@ async function resolveInstallScript({
   sourceRepoRoot,
   hermesHome,
   emit,
-  _download = downloadInstallScript
+  _download = downloadInstallScript,
+  _bundled = bundledInstallScript
 }) {
   // 1. Dev shortcut: prefer a local checkout's installer so we can iterate
   //    without pushing. SOURCE_REPO_ROOT comes from main.ts (path.resolve
@@ -334,6 +362,17 @@ async function resolveInstallScript({
     emit({ type: 'log', line: `[bootstrap] using local ${installScriptName()} at ${localScript}` })
 
     return { path: localScript, source: 'local', kind: installScriptKind() }
+  }
+
+  // 1b. Packaged EXE: use the installer shipped inside extraResources so
+  // first launch on a new PC does not depend on a desktop-repo SHA existing
+  // on kapilmoond/aakalan-cli1.
+  const bundled = typeof _bundled === 'function' ? _bundled() : _bundled
+
+  if (bundled) {
+    emit({ type: 'log', line: `[bootstrap] using bundled ${installScriptName()} at ${bundled}` })
+
+    return { path: bundled, source: 'bundled', kind: installScriptKind() }
   }
 
   // 2. Packaged path: download from GitHub at the install stamp's ref.
@@ -376,6 +415,26 @@ async function resolveInstallScript({
 
     return { path: cached, source: 'download', commit: resolvedCommit, kind: installScriptKind() }
   } catch (err) {
+    // Desktop builds used to stamp aakalan-agent SHAs and then fetch them
+    // from aakalan-cli1 (HTTP 404). Retry the public main branch, which
+    // always hosts scripts/install.ps1.
+    if (installRef.ref !== FALLBACK_BRANCH) {
+      try {
+        emit({
+          type: 'log',
+          line:
+            `[bootstrap] GitHub fetch of ${installRef.ref.slice(0, 12)} failed (${err.message}); ` +
+            `retrying ${FALLBACK_BRANCH}`
+        })
+        await _download(FALLBACK_BRANCH, cached)
+        emit({ type: 'log', line: `[bootstrap] saved ${FALLBACK_BRANCH} installer to ${cached}` })
+
+        return { path: cached, source: 'download', commit: null, kind: installScriptKind() }
+      } catch {
+        // continue to installed-checkout fallback
+      }
+    }
+
     // The pinned commit may not be fetchable from GitHub -- most commonly a
     // locally-built desktop app stamped to an unpushed HEAD (see
     // write-build-stamp.mjs fromLocalGit). Fall back to the installer that
@@ -1026,6 +1085,7 @@ async function runBootstrap(opts) {
 export {
   buildPinArgs,
   buildPosixPinArgs,
+  bundledInstallScript,
   cachedScriptPath,
   hasExistingGitCheckout,
   installedAgentInstallScript,

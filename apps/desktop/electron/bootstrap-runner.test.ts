@@ -213,6 +213,63 @@ test('resolveInstallScript prefers a cached script without touching the network'
   }
 })
 
+test('resolveInstallScript uses a bundled installer before GitHub', async () => {
+  const home = mkTmpHome()
+
+  try {
+    const bundled = path.join(home, 'bundled', SCRIPT_NAME)
+    fs.mkdirSync(path.dirname(bundled), { recursive: true })
+    fs.writeFileSync(bundled, '#!/bin/sh\necho bundled\n')
+
+    const result = await resolveInstallScript({
+      installStamp: { commit: 'a'.repeat(40), branch: 'main' },
+      sourceRepoRoot: null,
+      hermesHome: home,
+      emit: () => undefined,
+      _bundled: () => bundled,
+      _download: async () => {
+        throw new Error('network should not run when bundled installer exists')
+      }
+    })
+
+    assert.equal(result.source, 'bundled')
+    assert.equal(result.path, bundled)
+  } finally {
+    fs.rmSync(home, { recursive: true, force: true })
+  }
+})
+
+test('resolveInstallScript retries aakalan-cli1 main after a pinned SHA 404', async () => {
+  const home = mkTmpHome()
+
+  try {
+    const refs = []
+    const result = await resolveInstallScript({
+      installStamp: { commit: 'a'.repeat(40), branch: 'main' },
+      sourceRepoRoot: null,
+      hermesHome: home,
+      emit: () => undefined,
+      _bundled: () => null,
+      _download: async (ref, destPath) => {
+        refs.push(ref)
+        if (ref !== 'main') {
+          throw new Error('Failed to download install.ps1: HTTP 404 from github')
+        }
+        fs.mkdirSync(path.dirname(destPath), { recursive: true })
+        fs.writeFileSync(destPath, '#!/bin/sh\necho main\n')
+
+        return destPath
+      }
+    })
+
+    assert.deepEqual(refs, ['a'.repeat(40), 'main'])
+    assert.equal(result.source, 'download')
+    assert.equal(result.commit, null)
+  } finally {
+    fs.rmSync(home, { recursive: true, force: true })
+  }
+})
+
 test('resolveInstallScript falls back to the installed agent checkout on a 404', async () => {
   const home = mkTmpHome()
 
@@ -231,7 +288,8 @@ test('resolveInstallScript falls back to the installed agent checkout on a 404',
       sourceRepoRoot: null,
       hermesHome: home,
       emit: ev => logs.push(ev),
-      // Simulate GitHub returning a 404 for the pinned commit.
+      _bundled: () => null,
+      // Simulate GitHub returning a 404 for the pinned commit and for main.
       _download: async () => {
         throw new Error('Failed to download install.sh: HTTP 404')
       }
