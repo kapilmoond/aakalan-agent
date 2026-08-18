@@ -1364,12 +1364,59 @@ export type WhatsAppOnboardingStatus = {
 
 export function startWhatsAppOnboarding(body?: {
   allowed_users?: string
+  force_new?: boolean
   mode?: 'bot' | 'self-chat'
 }): Promise<WhatsAppOnboardingStatus> {
   return window.hermesDesktop.api<WhatsAppOnboardingStatus>({
     path: '/api/messaging/whatsapp/onboarding/start',
     method: 'POST',
-    body: { mode: 'self-chat', ...body }
+    body: { mode: 'self-chat', force_new: true, ...body }
+  })
+}
+
+export type EmailAccountInfo = {
+  address: string
+  enabled: boolean
+  has_password: boolean
+  id: string
+  imap_host?: string
+  imap_port?: number
+  label?: string
+  provider?: string
+  smtp_host?: string
+  smtp_port?: number
+  workspace_full?: boolean
+}
+
+export function listEmailAccounts(): Promise<{ accounts: EmailAccountInfo[]; ok: boolean }> {
+  return window.hermesDesktop.api<{ accounts: EmailAccountInfo[]; ok: boolean }>({
+    path: '/api/messaging/email/accounts'
+  })
+}
+
+export function upsertEmailAccount(body: {
+  address: string
+  enabled?: boolean
+  id?: string
+  imap_host?: string
+  imap_port?: number
+  password?: string
+  provider?: string
+  smtp_host?: string
+  smtp_port?: number
+  workspace_full?: boolean
+}): Promise<{ account: EmailAccountInfo; ok: boolean }> {
+  return window.hermesDesktop.api<{ account: EmailAccountInfo; ok: boolean }>({
+    path: '/api/messaging/email/accounts',
+    method: 'POST',
+    body
+  })
+}
+
+export function deleteEmailAccount(accountId: string): Promise<{ accounts: EmailAccountInfo[]; ok: boolean }> {
+  return window.hermesDesktop.api<{ accounts: EmailAccountInfo[]; ok: boolean }>({
+    path: `/api/messaging/email/accounts/${encodeURIComponent(accountId)}`,
+    method: 'DELETE'
   })
 }
 

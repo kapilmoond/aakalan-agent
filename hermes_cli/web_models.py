@@ -84,6 +84,21 @@ class WhatsAppOnboardingStart(BaseModel):
     mode: Optional[str] = "bot"
     allowed_users: Optional[str] = ""
     profile: Optional[str] = None
+    force_new: bool = False
+
+
+class EmailAccountUpsert(BaseModel):
+    id: Optional[str] = None
+    address: str
+    password: Optional[str] = None
+    provider: Optional[str] = None
+    imap_host: Optional[str] = None
+    smtp_host: Optional[str] = None
+    imap_port: Optional[int] = None
+    smtp_port: Optional[int] = None
+    workspace_full: bool = False
+    enabled: bool = True
+    profile: Optional[str] = None
 
 
 class WhatsAppOnboardingApply(BaseModel):

@@ -1485,6 +1485,7 @@ from hermes_cli.web_models import (  # noqa: F401
     TelegramOnboardingStart,
     TelegramOnboardingApply,
     WhatsAppOnboardingStart,
+    EmailAccountUpsert,
     WhatsAppOnboardingApply,
     AudioTranscriptionRequest,
     ManagedFileUpload,
@@ -8125,20 +8126,15 @@ _PLATFORM_OVERRIDES: dict[str, dict[str, Any]] = {
     },
     "email": {
         "name": "Email",
-        "description": "Talk to Aakalan Agent through an IMAP/SMTP mailbox.",
-        "docs_url": "https://hermes-agent.nousresearch.com/docs/user-guide/messaging/",
+        "description": "Talk to Aakalan Agent from Gmail, Google Workspace, Outlook, or any IMAP mailbox.",
+        "docs_url": "https://aakalaninfra.com",
         "env_vars": (
             "EMAIL_ADDRESS",
             "EMAIL_PASSWORD",
             "EMAIL_IMAP_HOST",
             "EMAIL_SMTP_HOST",
         ),
-        "required_env": (
-            "EMAIL_ADDRESS",
-            "EMAIL_PASSWORD",
-            "EMAIL_IMAP_HOST",
-            "EMAIL_SMTP_HOST",
-        ),
+        "required_env": (),
     },
     "sms": {
         "name": "SMS (Twilio)",
@@ -8923,6 +8919,116 @@ def _whatsapp_session_path() -> Path:
     return get_hermes_dir("platforms/whatsapp/session", "whatsapp/session")
 
 
+def _whatsapp_all_session_dirs() -> list[Path]:
+    """Both current and leftover session folders. Disconnect must wipe every one."""
+    from hermes_constants import get_hermes_home
+
+    home = get_hermes_home()
+    candidates = [
+        home / "platforms" / "whatsapp" / "session",
+        home / "whatsapp" / "session",
+        _whatsapp_session_path(),
+    ]
+    unique: list[Path] = []
+    seen: set[str] = set()
+    for path in candidates:
+        try:
+            key = str(path.resolve())
+        except Exception:
+            key = str(path)
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(path)
+    return unique
+
+
+def _kill_whatsapp_bridge_processes(session_path: Path) -> None:
+    """Stop the Node bridge that holds session files open (Windows lock)."""
+    try:
+        from plugins.platforms.whatsapp.adapter import _kill_stale_bridge_by_pidfile
+
+        _kill_stale_bridge_by_pidfile(session_path)
+    except Exception:
+        pass
+
+    session_key = str(session_path).lower()
+    try:
+        import psutil
+
+        for proc in psutil.process_iter(["pid", "name", "cmdline"]):
+            try:
+                cmdline = proc.info.get("cmdline") or []
+            except Exception:
+                continue
+            joined = " ".join(str(part) for part in cmdline).lower()
+            if "bridge.js" not in joined or "whatsapp" not in joined:
+                continue
+            if session_key and session_key not in joined and "--pair-only" not in joined:
+                # Still kill pairing/session processes that mention the session dir.
+                if "session" not in joined:
+                    continue
+            pid = proc.info.get("pid")
+            if not pid:
+                continue
+            if sys.platform == "win32":
+                subprocess.run(
+                    ["taskkill", "/PID", str(pid), "/T", "/F"],
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                    creationflags=windows_hide_flags(),
+                )
+            else:
+                try:
+                    proc.terminate()
+                except Exception:
+                    pass
+    except Exception:
+        pass
+
+
+def _rmtree_retry(path: Path, attempts: int = 8) -> None:
+    if not path.exists():
+        return
+    for attempt in range(attempts):
+        shutil.rmtree(path, ignore_errors=True)
+        if not path.exists():
+            return
+        time.sleep(0.35 * (attempt + 1))
+        try:
+            for child in path.rglob("*"):
+                try:
+                    child.chmod(stat.S_IWRITE)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+    shutil.rmtree(path, ignore_errors=True)
+
+
+def _wipe_whatsapp_identity() -> None:
+    """Forget the linked phone: kill the bridge, delete session files, clear allowlist."""
+    with _whatsapp_onboarding_lock:
+        for record in list(_whatsapp_onboarding_sessions.values()):
+            _terminate_whatsapp_pairing(record.proc)
+            record.status = "cancelled"
+        _whatsapp_onboarding_sessions.clear()
+
+    for session_path in _whatsapp_all_session_dirs():
+        _kill_whatsapp_bridge_processes(session_path)
+        _rmtree_retry(session_path)
+
+    try:
+        remove_env_value("WHATSAPP_ALLOWED_USERS")
+    except Exception:
+        save_env_value("WHATSAPP_ALLOWED_USERS", "")
+    try:
+        remove_env_value("WHATSAPP_ALLOW_FROM")
+    except Exception:
+        pass
+
+
 def _whatsapp_phone_from_identifier(value: Any) -> str | None:
     raw = str(value or "").strip()
     if not raw:
@@ -9269,7 +9375,12 @@ async def start_whatsapp_onboarding(body: WhatsAppOnboardingStart):
         session_path = _whatsapp_session_path()
         expires_at_ts = time.time() + _WHATSAPP_ONBOARDING_TTL_SECONDS
         expires_at = _utc_iso_from_ts(expires_at_ts)
-        if (session_path / "creds.json").exists():
+        if body.force_new:
+            # Connecting a different phone must never reuse leftover creds.json
+            # from the previous number.
+            _wipe_whatsapp_identity()
+            session_path = _whatsapp_session_path()
+        if (session_path / "creds.json").exists() and not body.force_new:
             pairing_id = secrets.token_urlsafe(16)
             account_id, account_name, account_phone = _whatsapp_linked_account_from_session(session_path)
             record = _WhatsAppOnboardingSession(
@@ -9354,7 +9465,7 @@ async def apply_whatsapp_onboarding(
         record_profile = record.profile
 
     effective_profile = body.profile or profile or record_profile
-    needs_restart = _whatsapp_apply_requires_restart(mode, allowed_users)
+    needs_restart = _whatsapp_apply_requires_restart(mode, allowed_users) or True
     try:
         with _config_profile_scope(effective_profile):
             save_env_value("WHATSAPP_MODE", mode)
@@ -9363,10 +9474,9 @@ async def apply_whatsapp_onboarding(
                 save_env_value("WHATSAPP_GROUP_POLICY", "disabled")
             else:
                 save_env_value("WHATSAPP_DM_POLICY", "pairing")
-            if allowed_users:
-                save_env_value("WHATSAPP_ALLOWED_USERS", allowed_users)
-            # Blank means "keep the existing allowlist"; explicit clearing
-            # still lives in the normal config editor where the field is visible.
+            # Always write the allowlist for this phone. Keeping the previous
+            # number is why a second phone shows "connected" but never replies.
+            save_env_value("WHATSAPP_ALLOWED_USERS", allowed_users)
             save_env_value("WHATSAPP_ENABLED", "true")
             _write_platform_enabled("whatsapp", True)
     except HTTPException:
@@ -9415,16 +9525,15 @@ async def cancel_whatsapp_onboarding(pairing_id: str):
 @app.post("/api/messaging/whatsapp/disconnect")
 async def disconnect_whatsapp(profile: Optional[str] = None):
     """Turn WhatsApp off and forget the linked phone session."""
-    import shutil
-
     effective_profile = profile
     try:
         with _config_profile_scope(effective_profile):
+            # Stop the live bridge first. On Windows an open Node process
+            # locks creds.json, so rmtree alone leaves the old phone behind.
+            _wipe_whatsapp_identity()
             save_env_value("WHATSAPP_ENABLED", "false")
             _write_platform_enabled("whatsapp", False)
-            session_path = _whatsapp_session_path()
-            if session_path.exists():
-                shutil.rmtree(session_path, ignore_errors=True)
+            _wipe_whatsapp_identity()
     except Exception as exc:
         _log.exception("WhatsApp disconnect failed")
         raise HTTPException(status_code=500, detail="Failed to disconnect WhatsApp.") from exc
@@ -9439,6 +9548,70 @@ async def disconnect_whatsapp(profile: Optional[str] = None):
         "disconnected": True,
         **restart_result,
     }
+
+
+def _email_enable_platform() -> None:
+    save_env_value("EMAIL_ENABLED", "true")
+    _write_platform_enabled("email", True)
+
+
+def _email_disable_if_empty() -> None:
+    from plugins.platforms.email.accounts import has_any_account
+
+    if has_any_account():
+        return
+    try:
+        remove_env_value("EMAIL_ENABLED")
+    except Exception:
+        save_env_value("EMAIL_ENABLED", "false")
+    _write_platform_enabled("email", False)
+
+
+@app.get("/api/messaging/email/accounts")
+async def list_email_accounts(profile: Optional[str] = None):
+    from plugins.platforms.email.accounts import load_accounts, public_account
+
+    with _config_profile_scope(profile):
+        accounts = [public_account(item) for item in load_accounts()]
+    return {"ok": True, "accounts": accounts}
+
+
+@app.post("/api/messaging/email/accounts")
+async def upsert_email_account(body: EmailAccountUpsert):
+    from plugins.platforms.email.accounts import public_account, upsert_account
+
+    payload = body.model_dump()
+    profile = payload.pop("profile", None)
+    try:
+        with _config_profile_scope(profile):
+            account = upsert_account(payload)
+            _email_enable_platform()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        _log.exception("Email account save failed")
+        raise HTTPException(status_code=500, detail="Failed to save the email account.") from exc
+
+    restart_result = _restart_gateway_after_whatsapp_onboarding(profile, force_new=True)
+    return {
+        "ok": True,
+        "account": public_account(account),
+        **restart_result,
+    }
+
+
+@app.delete("/api/messaging/email/accounts/{account_id}")
+async def delete_email_account(account_id: str, profile: Optional[str] = None):
+    from plugins.platforms.email.accounts import delete_account, load_accounts, public_account
+
+    with _config_profile_scope(profile):
+        removed = delete_account(account_id)
+        if not removed:
+            raise HTTPException(status_code=404, detail="That email account was not found.")
+        _email_disable_if_empty()
+        remaining = [public_account(item) for item in load_accounts()]
+    restart_result = _restart_gateway_after_whatsapp_onboarding(profile, force_new=True)
+    return {"ok": True, "accounts": remaining, **restart_result}
 
 
 _TELEGRAM_ONBOARDING_DEFAULT_URL = "https://setup.hermes-agent.nousresearch.com"

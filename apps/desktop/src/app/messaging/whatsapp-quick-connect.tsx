@@ -104,7 +104,7 @@ export function WhatsAppQuickConnect({
     setQr(null)
     setHint('Preparing a one-time QR code…')
     try {
-      const status = await startWhatsAppOnboarding({ mode: 'self-chat' })
+      const status = await startWhatsAppOnboarding({ force_new: true, mode: 'self-chat' })
       setPairingId(status.pairing_id)
       applyStatus(status)
       if (status.status === 'connected') {

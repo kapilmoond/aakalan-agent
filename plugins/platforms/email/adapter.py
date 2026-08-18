@@ -1,7 +1,7 @@
 """
-Email platform adapter for the Hermes gateway.
+Email platform adapter for the Aakalan Agent gateway.
 
-Allows users to interact with Hermes by sending emails.
+Allows users to interact with Aakalan Agent by sending emails.
 Uses IMAP to receive and SMTP to send messages.
 
 Environment variables:
@@ -231,6 +231,13 @@ def check_email_requirements() -> bool:
     Treats blank/whitespace-only values as missing so an abandoned setup that
     left empty ``EMAIL_*`` keys in ``.env`` does not enable the platform (#40715).
     """
+    try:
+        from plugins.platforms.email.accounts import has_any_account
+
+        if has_any_account():
+            return True
+    except Exception:
+        pass
     addr = _get_secret("EMAIL_ADDRESS", "").strip()
     pwd = _get_secret("EMAIL_PASSWORD", "").strip()
     imap = _get_secret("EMAIL_IMAP_HOST", "").strip()
@@ -557,6 +564,15 @@ class EmailAdapter(BasePlatformAdapter):
         self._smtp_host = (_get_secret("EMAIL_SMTP_HOST", "") or extra.get("smtp_host", "")).strip()
         self._smtp_port = _esecret_int("EMAIL_SMTP_PORT", 587)
         self._poll_interval = _esecret_int("EMAIL_POLL_INTERVAL", 15)
+        self._mailboxes = self._load_mailboxes()
+        if self._mailboxes:
+            primary = self._mailboxes[0]
+            self._address = primary["address"]
+            self._password = primary["password"]
+            self._imap_host = primary["imap_host"]
+            self._imap_port = int(primary.get("imap_port") or 993)
+            self._smtp_host = primary["smtp_host"]
+            self._smtp_port = int(primary.get("smtp_port") or 587)
 
         # Skip attachments — configured via config.yaml:
         #   platforms:
@@ -605,7 +621,58 @@ class EmailAdapter(BasePlatformAdapter):
         # Map chat_id (sender email) -> last subject + message-id for threading
         self._thread_context: Dict[str, Dict[str, str]] = {}
 
-        logger.info("[Email] Adapter initialized for %s", self._address)
+        logger.info(
+            "[Email] Adapter initialized for %s",
+            ", ".join(item["address"] for item in self._mailboxes) or self._address or "(none)",
+        )
+
+    def _load_mailboxes(self) -> List[Dict[str, Any]]:
+        try:
+            from plugins.platforms.email.accounts import load_accounts
+
+            accounts = [
+                item
+                for item in load_accounts()
+                if item.get("enabled", True)
+                and item.get("address")
+                and item.get("password")
+                and item.get("imap_host")
+                and item.get("smtp_host")
+            ]
+            if accounts:
+                return accounts
+        except Exception as exc:
+            logger.warning("[Email] Could not load extra mailboxes: %s", exc)
+        if self._address and self._password and self._imap_host and self._smtp_host:
+            return [{
+                "id": "legacy-env",
+                "address": self._address,
+                "password": self._password,
+                "imap_host": self._imap_host,
+                "imap_port": self._imap_port,
+                "smtp_host": self._smtp_host,
+                "smtp_port": self._smtp_port,
+                "provider": "other",
+                "enabled": True,
+            }]
+        return []
+
+    def _mailbox_for(self, address: Optional[str] = None) -> Dict[str, Any]:
+        if address:
+            wanted = address.strip().lower()
+            for item in self._mailboxes:
+                if str(item.get("address") or "").strip().lower() == wanted:
+                    return item
+        if self._mailboxes:
+            return self._mailboxes[0]
+        return {
+            "address": self._address,
+            "password": self._password,
+            "imap_host": self._imap_host,
+            "imap_port": self._imap_port,
+            "smtp_host": self._smtp_host,
+            "smtp_port": self._smtp_port,
+        }
 
     def _trim_seen_uids(self) -> None:
         """Keep only the most recent UIDs to prevent unbounded memory growth.
@@ -627,7 +694,7 @@ class EmailAdapter(BasePlatformAdapter):
             # Fallback: just clear old entries if sort fails
             self._seen_uids = set(list(self._seen_uids)[-self._seen_uids_max // 2:])
 
-    def _connect_smtp(self) -> smtplib.SMTP:
+    def _connect_smtp(self, mailbox: Optional[Dict[str, Any]] = None) -> smtplib.SMTP:
         """Create an SMTP connection, selecting the correct protocol for the port.
 
         Port 465 uses implicit TLS (``SMTP_SSL``).  All other ports use
@@ -642,9 +709,10 @@ class EmailAdapter(BasePlatformAdapter):
         Returns a connected SMTP object with TLS established — callers
         can proceed directly to ``login()``.
         """
+        box = mailbox or self._mailbox_for()
         ctx = ssl.create_default_context()
-        host = self._smtp_host
-        port = self._smtp_port
+        host = str(box.get("smtp_host") or self._smtp_host)
+        port = int(box.get("smtp_port") or self._smtp_port or 587)
 
         def _connect(*, ipv4_only: bool = False) -> smtplib.SMTP:
             """Attempt one SMTP connection."""
@@ -671,6 +739,15 @@ class EmailAdapter(BasePlatformAdapter):
 
     async def connect(self, *, is_reconnect: bool = False) -> bool:
         """Connect to the IMAP server and start polling for new messages."""
+        self._mailboxes = self._load_mailboxes()
+        if self._mailboxes:
+            primary = self._mailboxes[0]
+            self._address = primary["address"]
+            self._password = primary["password"]
+            self._imap_host = primary["imap_host"]
+            self._imap_port = int(primary.get("imap_port") or 993)
+            self._smtp_host = primary["smtp_host"]
+            self._smtp_port = int(primary.get("smtp_port") or 587)
         # Validate up front so a missing host surfaces as an actionable config
         # error instead of IMAP4_SSL("") raising the cryptic
         # ``[Errno 8] nodename nor servname provided, or not known``.
@@ -688,8 +765,7 @@ class EmailAdapter(BasePlatformAdapter):
             message = (
                 "Not configured — missing "
                 + ", ".join(missing)
-                + ". Set it via `hermes gateway setup` (env) or platforms.email "
-                "in config.yaml."
+                + ". Add a mailbox in Messaging → Email, or set it via `aakalan gateway setup`."
             )
             logger.error("[Email] %s", message)
             # Mark non-retryable so the gateway does NOT keep reconnecting against
@@ -701,101 +777,83 @@ class EmailAdapter(BasePlatformAdapter):
             )
             return False
 
-        try:
-            # Test IMAP connection. The handle is closed in ``finally`` —
-            # before this, a failure in login/select/search left the TCP
-            # socket open with no owner, leaking one fd per connect attempt.
-            # Under the gateway's reconnect watcher (fresh adapter instance
-            # per retry) against an unreachable/proxied host this grew
-            # monotonically until fd exhaustion on macOS's 256 soft limit
-            # (#79889).
-            imap = None
+        mailboxes = self._mailboxes or [self._mailbox_for()]
+        for box in mailboxes:
+            address = str(box.get("address") or "")
+            imap_host = str(box.get("imap_host") or "")
+            imap_port = int(box.get("imap_port") or 993)
             try:
-                imap = imaplib.IMAP4_SSL(self._imap_host, self._imap_port, timeout=30)
-                imap.login(self._address, self._password)
-                _send_imap_id(imap)
-                imap.select("INBOX")
-                snapshot = self._seen_uids_snapshot.get(self._address)
-                if is_reconnect and snapshot is not None:
-                    # Reconnect within the same process: restore the previous
-                    # adapter's seen-UID baseline instead of re-marking the whole
-                    # mailbox. Mail that arrived during the outage stays UNSEEN
-                    # relative to the baseline and is dispatched by the next poll
-                    # instead of being silently skipped.
-                    self._seen_uids = set(snapshot)
-                    self._trim_seen_uids()
-                    logger.info(
-                        "[Email] IMAP reconnect test passed. Restored %d seen UIDs; "
-                        "messages received during the outage will be processed.",
-                        len(self._seen_uids),
-                    )
-                else:
-                    # First connect (or no snapshot): mark all existing messages as
-                    # seen so we only process new ones.
-                    status, data = imap.uid("search", None, "ALL")
-                    if status == "OK" and data and data[0]:
-                        for uid in data[0].split():
-                            self._seen_uids.add(uid)
-                    # Keep only the most recent UIDs to prevent unbounded growth
-                    self._trim_seen_uids()
-                    logger.info("[Email] IMAP connection test passed. %d existing messages skipped.", len(self._seen_uids))
-            finally:
-                if imap is not None:
-                    _close_imap(imap)
-            self._seen_uids_snapshot[self._address] = set(self._seen_uids)
-        except Exception as e:
-            logger.error("[Email] IMAP connection failed: %s", e)
-            # Always set an explicit fatal code (OOF-156): returning False
-            # with no error info made the gateway treat every IMAP failure —
-            # including permanently bad credentials — as transient, retrying
-            # forever with zero owner signal ("stuck retrying 22h").
-            # Kept retryable=True deliberately: imaplib raises the same
-            # generic IMAP4.error for bad credentials AND transient server
-            # NOs (e.g. Gmail's "too many simultaneous connections"), so a
-            # type-based terminal classification isn't safe here. Long-lived
-            # loops surface via the reconnect watcher's NEEDS_ATTENTION
-            # escalation instead.
-            self._set_fatal_error(
-                "email_imap_connect_error",
-                f"IMAP connection to {self._imap_host}:{self._imap_port} failed: {e}",
-                retryable=True,
-            )
-            return False
+                imap = None
+                try:
+                    imap = imaplib.IMAP4_SSL(imap_host, imap_port, timeout=30)
+                    imap.login(address, str(box.get("password") or ""))
+                    _send_imap_id(imap)
+                    imap.select("INBOX")
+                    snapshot_key = address
+                    snapshot = self._seen_uids_snapshot.get(snapshot_key)
+                    if is_reconnect and snapshot is not None:
+                        self._seen_uids_snapshot[snapshot_key] = set(snapshot)
+                        logger.info(
+                            "[Email] IMAP reconnect test passed for %s. Restored %d seen UIDs.",
+                            address,
+                            len(snapshot),
+                        )
+                    else:
+                        seen: set = set()
+                        status, data = imap.uid("search", None, "ALL")
+                        if status == "OK" and data and data[0]:
+                            for uid in data[0].split():
+                                seen.add(uid)
+                        self._seen_uids_snapshot[snapshot_key] = seen
+                        logger.info(
+                            "[Email] IMAP connection test passed for %s. %d existing messages skipped.",
+                            address,
+                            len(seen),
+                        )
+                finally:
+                    if imap is not None:
+                        _close_imap(imap)
+            except Exception as e:
+                logger.error("[Email] IMAP connection failed for %s: %s", address, e)
+                self._set_fatal_error(
+                    "email_imap_connect_error",
+                    f"IMAP connection to {imap_host}:{imap_port} failed for {address}: {e}",
+                    retryable=True,
+                )
+                return False
 
-        try:
-            # Test SMTP connection
-            smtp = self._connect_smtp()
             try:
-                smtp.login(self._address, self._password)
-            finally:
-                smtp.quit()
-            logger.info("[Email] SMTP connection test passed.")
-        except smtplib.SMTPAuthenticationError as e:
-            logger.error("[Email] SMTP authentication failed: %s", e)
-            # Typed auth failure (535 & friends): bad or revoked credentials
-            # can never self-heal, so drop out of the reconnect queue instead
-            # of retrying a dead password forever (OOF-156). Type-based only —
-            # SMTPAuthenticationError is unambiguous, unlike IMAP4.error above.
-            self._set_fatal_error(
-                "email_auth_error",
-                f"SMTP authentication failed for {self._address}: {e}. "
-                "Check EMAIL_PASSWORD (for Gmail/Outlook this must be an "
-                "app password, not the account password).",
-                retryable=False,
-            )
-            return False
-        except Exception as e:
-            logger.error("[Email] SMTP connection failed: %s", e)
-            self._set_fatal_error(
-                "email_smtp_connect_error",
-                f"SMTP connection to {self._smtp_host} failed: {e}",
-                retryable=True,
-            )
-            return False
+                smtp = self._connect_smtp(box)
+                try:
+                    smtp.login(address, str(box.get("password") or ""))
+                finally:
+                    smtp.quit()
+                logger.info("[Email] SMTP connection test passed for %s.", address)
+            except smtplib.SMTPAuthenticationError as e:
+                logger.error("[Email] SMTP authentication failed for %s: %s", address, e)
+                self._set_fatal_error(
+                    "email_auth_error",
+                    f"SMTP authentication failed for {address}: {e}. "
+                    "For Gmail/Workspace/Outlook use an app password, not the account password.",
+                    retryable=False,
+                )
+                return False
+            except Exception as e:
+                logger.error("[Email] SMTP connection failed for %s: %s", address, e)
+                self._set_fatal_error(
+                    "email_smtp_connect_error",
+                    f"SMTP connection to {box.get('smtp_host')} failed for {address}: {e}",
+                    retryable=True,
+                )
+                return False
 
+        # Keep the primary seen-UID set for the original snapshot key used by
+        # older single-mailbox reconnect paths.
+        self._seen_uids = set(self._seen_uids_snapshot.get(self._address, set()))
+        self._trim_seen_uids()
         self._running = True
         self._poll_task = asyncio.create_task(self._poll_loop())
-        print(f"[Email] Connected as {self._address}")
+        print("[Email] Connected as " + ", ".join(str(b.get("address") or "") for b in mailboxes))
         return True
 
     async def disconnect(self) -> None:
@@ -850,41 +908,54 @@ class EmailAdapter(BasePlatformAdapter):
 
     def _fetch_new_messages(self) -> List[Dict[str, Any]]:
         """Fetch new (unseen) messages from IMAP. Runs in executor thread."""
-        results = []
+        results: List[Dict[str, Any]] = []
+        any_failed = False
+        last_error = ""
+        for box in self._mailboxes or [self._mailbox_for()]:
+            box_results, failed, error = self._fetch_new_messages_from(box)
+            results.extend(box_results)
+            if failed:
+                any_failed = True
+                last_error = error
+        self._last_fetch_failed = any_failed
+        self._last_fetch_error = last_error
+        return results
+
+    def _fetch_new_messages_from(self, box: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], bool, str]:
+        results: List[Dict[str, Any]] = []
+        address = str(box.get("address") or self._address)
+        seen_key = address
+        seen = self._seen_uids_snapshot.setdefault(seen_key, set())
         imap: Optional[imaplib.IMAP4] = None
         try:
-            imap = imaplib.IMAP4_SSL(self._imap_host, self._imap_port, timeout=30)
+            imap = imaplib.IMAP4_SSL(str(box.get("imap_host") or self._imap_host), int(box.get("imap_port") or 993), timeout=30)
             try:
-                imap.login(self._address, self._password)
+                imap.login(address, str(box.get("password") or self._password))
                 _send_imap_id(imap)
                 imap.select("INBOX")
 
                 status, data = imap.uid("search", None, "UNSEEN")
                 if status != "OK" or not data or not data[0]:
-                    return results
+                    return results, False, ""
 
                 for uid in data[0].split():
-                    if uid in self._seen_uids:
+                    if uid in seen:
                         continue
 
                     status, msg_data = imap.uid("fetch", uid, "(RFC822)")
                     if status != "OK":
-                        # Transient per-UID fetch refusal: leave the UID out of
-                        # _seen_uids so the next poll retries it.
                         continue
 
-                    # IMAP fetch can return unexpected structures (e.g. a
-                    # single bytes item instead of a list of tuples). Mark the
-                    # UID seen once a response arrived (even a malformed one)
-                    # so a garbage response is skipped once, not retried
-                    # forever — but NOT before the fetch: a connection failure
-                    # above must leave the remaining batch eligible for the
-                    # next poll instead of permanently skipping it (#80032
-                    # review).
-                    self._seen_uids.add(uid)
-                    # Trim periodically to prevent unbounded memory growth
-                    if len(self._seen_uids) > self._seen_uids_max:
-                        self._trim_seen_uids()
+                    seen.add(uid)
+                    if len(seen) > self._seen_uids_max:
+                        try:
+                            sorted_uids = sorted(seen, key=lambda u: int(u))
+                            seen.clear()
+                            seen.update(sorted_uids[-(self._seen_uids_max // 2):])
+                        except (ValueError, TypeError):
+                            kept = list(seen)[-(self._seen_uids_max // 2):]
+                            seen.clear()
+                            seen.update(kept)
 
                     try:
                         raw_email = msg_data[0][1]
@@ -899,11 +970,6 @@ class EmailAdapter(BasePlatformAdapter):
                             "[Email] Non-bytes IMAP payload for UID %s, skipping", uid
                         )
                         continue
-                    # Per-message processing guard: one poison message
-                    # (unparseable headers, pathological attachment, DNS
-                    # hiccup in SPF/DKIM verification) must not abort the
-                    # batch or escalate to a reconnect — it is already marked
-                    # seen above, so log the UID and move on (#80032 review).
                     try:
                         parsed = self._parse_fetched_message(uid, raw_email)
                     except Exception as parse_exc:
@@ -914,20 +980,17 @@ class EmailAdapter(BasePlatformAdapter):
                         )
                         continue
                     if parsed is not None:
+                        parsed["mailbox"] = address
                         results.append(parsed)
             finally:
-                # _close_imap guarantees the socket dies even when logout()
-                # raises IMAP4.abort on a broken connection (#79889).
                 _close_imap(imap)
         except Exception as e:
-            logger.error("[Email] IMAP fetch error: %s", e)
-            self._last_fetch_failed = True
-            self._last_fetch_error = str(e)
-        # Keep the reconnect snapshot current with every poll so a mid-outage
-        # adapter recreation restores an up-to-date baseline: stale snapshots
-        # would re-dispatch messages this instance already processed.
-        self._seen_uids_snapshot[self._address] = set(self._seen_uids)
-        return results
+            logger.error("[Email] IMAP fetch error for %s: %s", address, e)
+            return results, True, str(e)
+        self._seen_uids_snapshot[seen_key] = seen
+        if address == self._address:
+            self._seen_uids = set(seen)
+        return results, False, ""
 
     def _parse_fetched_message(self, uid: bytes, raw_email: "bytes | bytearray") -> Optional[Dict[str, Any]]:
         """Parse one fetched RFC822 payload into a dispatchable dict.
@@ -1104,6 +1167,7 @@ class EmailAdapter(BasePlatformAdapter):
         self._thread_context[sender_addr] = {
             "subject": subject,
             "message_id": msg_data["message_id"],
+            "mailbox": msg_data.get("mailbox") or self._address,
         }
 
         source = self.build_source(
@@ -1162,13 +1226,15 @@ class EmailAdapter(BasePlatformAdapter):
         reply_to_msg_id: Optional[str] = None,
     ) -> str:
         """Send an email via SMTP. Runs in executor thread."""
+        ctx = self._thread_context.get(to_addr, {})
+        mailbox = self._mailbox_for(ctx.get("mailbox"))
+        from_addr = str(mailbox.get("address") or self._address)
         msg = MIMEMultipart()
-        msg["From"] = self._address
+        msg["From"] = from_addr
         msg["To"] = to_addr
 
         # Thread context for reply
-        ctx = self._thread_context.get(to_addr, {})
-        subject = ctx.get("subject", "Hermes Agent")
+        subject = ctx.get("subject", "Aakalan Agent")
         if not subject.startswith("Re:"):
             subject = f"Re: {subject}"
         msg["Subject"] = subject
@@ -1180,14 +1246,15 @@ class EmailAdapter(BasePlatformAdapter):
             msg["References"] = original_msg_id
 
         msg["Date"] = formatdate(localtime=True)
-        msg_id = f"<hermes-{uuid.uuid4().hex[:12]}@{self._message_id_domain()}>"
+        domain = from_addr.rsplit("@", 1)[-1] if "@" in from_addr else self._message_id_domain()
+        msg_id = f"<aakalan-{uuid.uuid4().hex[:12]}@{domain}>"
         msg["Message-ID"] = msg_id
 
         msg.attach(MIMEText(body, "plain", "utf-8"))
 
-        smtp = self._connect_smtp()
+        smtp = self._connect_smtp(mailbox)
         try:
-            smtp.login(self._address, self._password)
+            smtp.login(from_addr, str(mailbox.get("password") or self._password))
             smtp.send_message(msg)
         finally:
             try:
@@ -1277,12 +1344,14 @@ class EmailAdapter(BasePlatformAdapter):
         file_paths: List[str],
     ) -> str:
         """Send an email with multiple file attachments via SMTP."""
+        ctx = self._thread_context.get(to_addr, {})
+        mailbox = self._mailbox_for(ctx.get("mailbox"))
+        from_addr = str(mailbox.get("address") or self._address)
         msg = MIMEMultipart()
-        msg["From"] = self._address
+        msg["From"] = from_addr
         msg["To"] = to_addr
 
-        ctx = self._thread_context.get(to_addr, {})
-        subject = ctx.get("subject", "Hermes Agent")
+        subject = ctx.get("subject", "Aakalan Agent")
         if not subject.startswith("Re:"):
             subject = f"Re: {subject}"
         msg["Subject"] = subject
@@ -1293,7 +1362,8 @@ class EmailAdapter(BasePlatformAdapter):
             msg["References"] = original_msg_id
 
         msg["Date"] = formatdate(localtime=True)
-        msg_id = f"<hermes-{uuid.uuid4().hex[:12]}@{self._message_id_domain()}>"
+        domain = from_addr.rsplit("@", 1)[-1] if "@" in from_addr else self._message_id_domain()
+        msg_id = f"<aakalan-{uuid.uuid4().hex[:12]}@{domain}>"
         msg["Message-ID"] = msg_id
 
         if body:
@@ -1311,9 +1381,9 @@ class EmailAdapter(BasePlatformAdapter):
             except Exception as e:
                 logger.warning("[Email] Failed to attach %s: %s", file_path, e)
 
-        smtp = self._connect_smtp()
+        smtp = self._connect_smtp(mailbox)
         try:
-            smtp.login(self._address, self._password)
+            smtp.login(from_addr, str(mailbox.get("password") or self._password))
             smtp.send_message(msg)
         finally:
             try:
@@ -1357,12 +1427,14 @@ class EmailAdapter(BasePlatformAdapter):
         file_name: Optional[str] = None,
     ) -> str:
         """Send an email with a file attachment via SMTP."""
+        ctx = self._thread_context.get(to_addr, {})
+        mailbox = self._mailbox_for(ctx.get("mailbox"))
+        from_addr = str(mailbox.get("address") or self._address)
         msg = MIMEMultipart()
-        msg["From"] = self._address
+        msg["From"] = from_addr
         msg["To"] = to_addr
 
-        ctx = self._thread_context.get(to_addr, {})
-        subject = ctx.get("subject", "Hermes Agent")
+        subject = ctx.get("subject", "Aakalan Agent")
         if not subject.startswith("Re:"):
             subject = f"Re: {subject}"
         msg["Subject"] = subject
@@ -1373,7 +1445,8 @@ class EmailAdapter(BasePlatformAdapter):
             msg["References"] = original_msg_id
 
         msg["Date"] = formatdate(localtime=True)
-        msg_id = f"<hermes-{uuid.uuid4().hex[:12]}@{self._message_id_domain()}>"
+        domain = from_addr.rsplit("@", 1)[-1] if "@" in from_addr else self._message_id_domain()
+        msg_id = f"<aakalan-{uuid.uuid4().hex[:12]}@{domain}>"
         msg["Message-ID"] = msg_id
 
         if body:
@@ -1389,9 +1462,9 @@ class EmailAdapter(BasePlatformAdapter):
             part.add_header("Content-Disposition", f"attachment; filename={fname}")
             msg.attach(part)
 
-        smtp = self._connect_smtp()
+        smtp = self._connect_smtp(mailbox)
         try:
-            smtp.login(self._address, self._password)
+            smtp.login(from_addr, str(mailbox.get("password") or self._password))
             smtp.send_message(msg)
         finally:
             try:
@@ -1456,7 +1529,7 @@ async def _standalone_send(
         msg = MIMEText(message, "plain", "utf-8")
         msg["From"] = address
         msg["To"] = chat_id
-        msg["Subject"] = "Hermes Agent"
+        msg["Subject"] = "Aakalan Agent"
         msg["Date"] = formatdate(localtime=True)
 
         server = smtplib.SMTP(smtp_host, smtp_port)
@@ -1477,6 +1550,13 @@ def _is_connected(config) -> bool:
     """Email is connected when an address is configured (in PlatformConfig.extra
     or via EMAIL_ADDRESS). Mirrors the legacy
     _PLATFORM_CONNECTED_CHECKERS[Platform.EMAIL] = bool(extra.get('address'))."""
+    try:
+        from plugins.platforms.email.accounts import has_any_account
+
+        if has_any_account():
+            return True
+    except Exception:
+        pass
     extra = getattr(config, "extra", {}) or {}
     if extra.get("address"):
         return True
