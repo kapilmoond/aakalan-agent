@@ -9011,7 +9011,7 @@ def _whatsapp_session_path() -> Path:
 
 
 def _whatsapp_all_session_dirs() -> list[Path]:
-    """Both current and leftover session folders. Disconnect must wipe every one."""
+    """Every WhatsApp session folder, including leftover ``session*.bak`` dirs."""
     from hermes_constants import get_hermes_home
 
     home = get_hermes_home()
@@ -9020,6 +9020,14 @@ def _whatsapp_all_session_dirs() -> list[Path]:
         home / "whatsapp" / "session",
         _whatsapp_session_path(),
     ]
+    for parent in (home / "platforms" / "whatsapp", home / "whatsapp"):
+        try:
+            if parent.is_dir():
+                for child in parent.iterdir():
+                    if child.is_dir() and child.name.startswith("session"):
+                        candidates.append(child)
+        except OSError:
+            pass
     unique: list[Path] = []
     seen: set[str] = set()
     for path in candidates:
@@ -9098,6 +9106,30 @@ def _rmtree_retry(path: Path, attempts: int = 8) -> None:
     shutil.rmtree(path, ignore_errors=True)
 
 
+def _wait_until_whatsapp_bridges_gone(timeout_s: float = 8.0) -> None:
+    """Pair-only Node still holds creds.json on Windows until it fully exits."""
+    deadline = time.time() + timeout_s
+    while time.time() < deadline:
+        leftover = False
+        try:
+            import psutil
+
+            for proc in psutil.process_iter(["pid", "name", "cmdline"]):
+                try:
+                    cmdline = proc.info.get("cmdline") or []
+                except Exception:
+                    continue
+                joined = " ".join(str(part) for part in cmdline).lower()
+                if "bridge.js" in joined and "whatsapp" in joined:
+                    leftover = True
+                    break
+        except Exception:
+            leftover = False
+        if not leftover:
+            return
+        time.sleep(0.25)
+
+
 def _wipe_whatsapp_identity() -> None:
     """Forget the linked phone: kill the bridge, delete session files, clear allowlist."""
     with _whatsapp_onboarding_lock:
@@ -9109,6 +9141,8 @@ def _wipe_whatsapp_identity() -> None:
 
     for session_path in _whatsapp_all_session_dirs():
         _kill_whatsapp_bridge_processes(session_path)
+    _wait_until_whatsapp_bridges_gone()
+    for session_path in _whatsapp_all_session_dirs():
         _rmtree_retry(session_path)
 
     try:
@@ -9117,6 +9151,14 @@ def _wipe_whatsapp_identity() -> None:
         save_env_value("WHATSAPP_ALLOWED_USERS", "")
     try:
         remove_env_value("WHATSAPP_ALLOW_FROM")
+    except Exception:
+        pass
+    try:
+        save_env_value("WHATSAPP_ENABLED", "false")
+    except Exception:
+        pass
+    try:
+        _write_platform_enabled("whatsapp", False)
     except Exception:
         pass
 
@@ -9605,11 +9647,19 @@ async def apply_whatsapp_onboarding(
         if mode == "self-chat" and not allowed_users:
             allowed_users = record.account_phone or record.account_id or ""
         record_profile = record.profile
+        pairing_proc = record.proc
+
+    _terminate_whatsapp_pairing(pairing_proc)
+    _wait_until_whatsapp_bridges_gone()
 
     effective_profile = body.profile or profile or record_profile
-    needs_restart = bool(_whatsapp_apply_requires_restart(mode, allowed_users))
     try:
         with _config_profile_scope(effective_profile):
+            if not allowed_users:
+                _sid, _sname, scanned_phone = _whatsapp_linked_account_from_session(
+                    _whatsapp_session_path()
+                )
+                allowed_users = scanned_phone or _sid or ""
             save_env_value("WHATSAPP_MODE", mode)
             if mode == "self-chat":
                 save_env_value("WHATSAPP_DM_POLICY", "allowlist")
@@ -9636,21 +9686,14 @@ async def apply_whatsapp_onboarding(
         _whatsapp_onboarding_sessions.pop(pairing_id, None)
         _persist_whatsapp_onboarding_sessions()
 
-    if needs_restart:
-        restart_result = _restart_gateway_after_whatsapp_onboarding(
-            effective_profile,
-            force_new=True,
-        )
-    else:
-        restart_result = {
-            "restart_started": False,
-            "restart_skipped": True,
-            "restart_reason": "already_applied",
-        }
+    restart_result = _restart_gateway_after_whatsapp_onboarding(
+        effective_profile,
+        force_new=True,
+    )
     return {
         "ok": True,
         "platform": "whatsapp",
-        "needs_restart": bool(needs_restart and not restart_result.get("restart_started")),
+        "needs_restart": not restart_result.get("restart_started"),
         **restart_result,
     }
 

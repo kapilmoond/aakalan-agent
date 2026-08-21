@@ -82,12 +82,13 @@ export function WhatsAppQuickConnect({
 
   const finish = async (id: string) => {
     setPhase('finishing')
+    setHint('Starting WhatsApp… Aakalan will reply from this phone.')
     try {
       await applyWhatsAppOnboarding(id)
       setPairingId(null)
       setQr(null)
       setPhase('connected')
-      setHint('Connected. Messages from your own WhatsApp only.')
+      setHint('Connected. Send a message to yourself on this same WhatsApp.')
       notify({ title: 'WhatsApp connected', body: 'Aakalan will reply only to you.' })
       await onChanged()
     } catch (error) {
@@ -137,13 +138,27 @@ export function WhatsAppQuickConnect({
       return
     }
     setBusy(true)
+    setHint('Removing the old WhatsApp link…')
     try {
       await disconnectWhatsApp()
-    } catch {
-      // Gateway restarts on disconnect. Reload either way so the client
-      // never sees the crash overlay / Reload / Open logs buttons.
+      setPairingId(null)
+      setQr(null)
+      setAccount(null)
+      setPhase('idle')
+      setHint('Old WhatsApp removed. Click Connect and scan the new phone.')
+      await onChanged()
+    } catch (error) {
+      setPhase('idle')
+      setHint('Old WhatsApp was removed. Click Connect if you want a new QR.')
+      notifyError(error, 'WhatsApp disconnected. Chat should stay available.')
+      try {
+        await onChanged()
+      } catch {
+        // ignore refresh errors while gateway restarts
+      }
+    } finally {
+      setBusy(false)
     }
-    window.location.reload()
   }
 
   return (
