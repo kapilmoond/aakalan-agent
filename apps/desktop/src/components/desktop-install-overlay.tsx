@@ -19,8 +19,6 @@ import { AlertCircle, ChevronDown, ChevronRight, iconSize, Loader2 } from '@/lib
 import { capitalize } from '@/lib/text'
 import { cn } from '@/lib/utils'
 
-
-
 /**
  * DesktopInstallOverlay
  *
@@ -406,16 +404,15 @@ export function DesktopInstallOverlay({ enabled = true }: DesktopInstallOverlayP
 
     if (!desktop || typeof desktop.continueBootstrapLocal !== 'function') {
       setLocalStart({ root: activeRoot, starting: false, error: copy.localStartUnavailable })
+
       return
     }
 
-    desktop
-      .continueBootstrapLocal()
-      .catch(err => {
-        if (!cancelled) {
-          setLocalStart({ root: activeRoot, starting: false, error: errorMessage(err) })
-        }
-      })
+    desktop.continueBootstrapLocal().catch(err => {
+      if (!cancelled) {
+        setLocalStart({ root: activeRoot, starting: false, error: errorMessage(err) })
+      }
+    })
 
     return () => {
       cancelled = true

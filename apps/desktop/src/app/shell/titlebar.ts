@@ -80,7 +80,7 @@ export function titlebarToolsWidthCss(toolCount: number): string {
 }
 
 export const titlebarHeaderBaseClass =
-  'pointer-events-none relative z-3 flex h-(--titlebar-height) w-full min-w-0 shrink-0 items-center justify-start gap-2 overflow-hidden border-b border-(--ui-stroke-tertiary) bg-(--ui-chat-surface-background) px-[max(0.75rem,var(--titlebar-content-inset,0rem))] pr-[calc(var(--titlebar-tools-right,0.75rem)+var(--titlebar-tools-width,0px)+0.75rem)] before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-[3px] before:bg-(--aaklan-strip) before:content-[\'\']'
+  "pointer-events-none relative z-3 flex h-(--titlebar-height) w-full min-w-0 shrink-0 items-center justify-start gap-2 overflow-hidden border-b border-(--ui-stroke-tertiary) bg-(--ui-chat-surface-background) px-[max(0.75rem,var(--titlebar-content-inset,0rem))] pr-[calc(var(--titlebar-tools-right,0.75rem)+var(--titlebar-tools-width,0px)+0.75rem)] before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-[3px] before:bg-(--aaklan-strip) before:content-['']"
 
 // Title row inside the header — must stay in the flex truncate chain.
 export const titlebarHeaderTitleClass = 'min-w-0 flex-1 overflow-hidden'

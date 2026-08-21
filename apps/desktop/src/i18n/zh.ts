@@ -500,7 +500,8 @@ export const zh: Translations = {
         title: '宠物',
         intro:
           '领养一只悬浮在应用上的 petdex 动画宠物，它会根据 Aakalan Agent 的状态做出反应——工具执行时奔跑、成功时欢呼、出错时沮丧。',
-        restartHint: '宠物功能需要重启——当前运行的应用在此功能加入前启动。请退出并重新打开 Aakalan Agent，然后回到此处。',
+        restartHint:
+          '宠物功能需要重启——当前运行的应用在此功能加入前启动。请退出并重新打开 Aakalan Agent，然后回到此处。',
         scaleTitle: '大小',
         scaleDesc: '调整悬浮宠物的大小，所有界面即时生效。',
         roamTitle: '漫游',
@@ -1020,8 +1021,7 @@ export const zh: Translations = {
       sshErrAuth:
         'SSH 认证失败。请将密钥加载到 ssh-agent（ssh-add），或在 ~/.ssh/config 中设置 IdentityFile——Aakalan Agent 以非交互方式运行 ssh。',
       sshErrHostKey: '自上次连接以来主机密钥已更改。请确认这是预期的，然后运行 ssh-keygen -R <host> 并重新连接。',
-      sshErrNotInstalled:
-        '远程主机上未安装 Aakalan Agent。请在远程安装或设置 Aakalan Agent 路径。',
+      sshErrNotInstalled: '远程主机上未安装 Aakalan Agent。请在远程安装或设置 Aakalan Agent 路径。',
       sshErrPlatform: '不支持的远程平台。Aakalan Agent Desktop 的 SSH 模式支持 Linux、macOS 和 Windows 远程主机。',
       sshErrTimeout: 'SSH 连接超时。主机可能无法访问或处于休眠状态。',
       sshErrUpdateRequired: '使用 Desktop SSH 连接前，请更新远程主机上的 Aakalan Agent。',
@@ -2690,7 +2690,8 @@ export const zh: Translations = {
     copyAuthCode: '复制授权码并粘贴到下面。',
     pasteAuthCode: '粘贴授权码',
     reopenAuthPage: '重新打开授权页面',
-    autoBrowser: provider => `已在浏览器中打开 ${provider}。请在那里授权 Aakalan Agent，连接会自动完成，无需复制或粘贴。`,
+    autoBrowser: provider =>
+      `已在浏览器中打开 ${provider}。请在那里授权 Aakalan Agent，连接会自动完成，无需复制或粘贴。`,
     reopenSignInPage: '重新打开登录页面',
     waitingAuthorize: '等待你授权...',
     externalPending: provider => `${provider} 通过自己的 CLI 登录。请在终端运行此命令，然后回来选择“我已登录”：`,

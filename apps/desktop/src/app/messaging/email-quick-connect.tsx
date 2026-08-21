@@ -2,12 +2,7 @@ import { useEffect, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import {
-  deleteEmailAccount,
-  listEmailAccounts,
-  upsertEmailAccount,
-  type EmailAccountInfo
-} from '@/hermes'
+import { deleteEmailAccount, type EmailAccountInfo, listEmailAccounts, upsertEmailAccount } from '@/hermes'
 import { notify, notifyError } from '@/store/notifications'
 
 type Provider = 'gmail' | 'workspace' | 'outlook' | 'other'
@@ -19,11 +14,7 @@ const PROVIDERS: Array<{ hint: string; id: Provider; label: string }> = [
   { id: 'other', label: 'Other IMAP', hint: 'Any mailbox with IMAP + SMTP' }
 ]
 
-export function EmailQuickConnect({
-  onChanged
-}: {
-  onChanged: () => Promise<void> | void
-}) {
+export function EmailQuickConnect({ onChanged }: { onChanged: () => Promise<void> | void }) {
   const [accounts, setAccounts] = useState<EmailAccountInfo[]>([])
   const [busy, setBusy] = useState(false)
   const [adding, setAdding] = useState(false)
@@ -48,15 +39,21 @@ export function EmailQuickConnect({
 
   const addAccount = async () => {
     const email = address.trim()
+
     if (!email || !password.trim()) {
       setHint('Enter the email address and an app password.')
+
       return
     }
+
     if (provider === 'other' && (!imapHost.trim() || !smtpHost.trim())) {
       setHint('For other IMAP mailboxes, fill IMAP host and SMTP host.')
+
       return
     }
+
     setBusy(true)
+
     try {
       await upsertEmailAccount({
         address: email,
@@ -90,7 +87,9 @@ export function EmailQuickConnect({
     if (!window.confirm(`Remove ${account.address}? Aakalan will stop reading this mailbox.`)) {
       return
     }
+
     setBusy(true)
+
     try {
       const result = await deleteEmailAccount(account.id)
       setAccounts(result.accounts || [])
@@ -165,8 +164,16 @@ export function EmailQuickConnect({
           />
           {provider === 'other' && (
             <>
-              <Input onChange={event => setImapHost(event.target.value)} placeholder="IMAP host, e.g. imap.example.com" value={imapHost} />
-              <Input onChange={event => setSmtpHost(event.target.value)} placeholder="SMTP host, e.g. smtp.example.com" value={smtpHost} />
+              <Input
+                onChange={event => setImapHost(event.target.value)}
+                placeholder="IMAP host, e.g. imap.example.com"
+                value={imapHost}
+              />
+              <Input
+                onChange={event => setSmtpHost(event.target.value)}
+                placeholder="SMTP host, e.g. smtp.example.com"
+                value={smtpHost}
+              />
             </>
           )}
           {provider === 'workspace' && (
@@ -178,13 +185,14 @@ export function EmailQuickConnect({
                 type="checkbox"
               />
               <span>
-                Complete Workspace: this mailbox plus Gmail / Calendar / Drive / Docs / Sheets for the same Google account.
+                Complete Workspace: this mailbox plus Gmail / Calendar / Drive / Docs / Sheets for the same Google
+                account.
               </span>
             </label>
           )}
           <p className="m-0 text-xs text-muted-foreground">
-            Gmail and Google Workspace: Google Account → Security → 2-Step Verification → App passwords. Create one named
-            Aakalan and paste it here. Do not use the normal account password.
+            Gmail and Google Workspace: Google Account → Security → 2-Step Verification → App passwords. Create one
+            named Aakalan and paste it here. Do not use the normal account password.
           </p>
           <div className="flex flex-wrap gap-2">
             <Button disabled={busy} onClick={() => void addAccount()}>

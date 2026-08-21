@@ -686,6 +686,7 @@ const ACTIVE_HERMES_ROOT = directoryExists(path.join(HERMES_HOME, 'aakalan-cli')
   : directoryExists(path.join(HERMES_HOME, 'hermes-agent'))
     ? path.join(HERMES_HOME, 'hermes-agent')
     : path.join(HERMES_HOME, 'aakalan-cli')
+
 // VENV_ROOT — venv lives inside the repo, exactly like install.ps1 does it.
 const VENV_ROOT = path.join(ACTIVE_HERMES_ROOT, 'venv')
 // BOOTSTRAP_COMPLETE_MARKER — written by the first-launch bootstrap runner
@@ -1766,6 +1767,7 @@ async function waitForFirstRunSetupChoice(backend) {
     { allowDecrease: true }
   )
   gate.continueLocal()
+
   return 'continue-local'
 }
 
@@ -4554,7 +4556,8 @@ async function ensureRuntime(backend) {
     // If we hit this, the user (or a deleted venv) broke the invariant; tell
     // them to re-run the install.
     throw new Error(
-      `Aakalan Agent venv missing at ${VENV_ROOT}. Re-run the desktop installer or ` + '`scripts/install.ps1` to rebuild it.'
+      `Aakalan Agent venv missing at ${VENV_ROOT}. Re-run the desktop installer or ` +
+        '`scripts/install.ps1` to rebuild it.'
     )
   }
 

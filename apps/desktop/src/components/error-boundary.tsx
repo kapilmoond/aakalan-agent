@@ -41,6 +41,7 @@ function lastAutoReloadAt(): number {
 
 function canAutoReloadWindow(): boolean {
   const last = lastAutoReloadAt()
+
   return !last || Date.now() - last > AUTO_RELOAD_COOLDOWN_MS
 }
 
@@ -97,6 +98,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       console.warn(`${tag} auto-recovering from assistant-ui lookup render race`, error.message)
       this.autoRecoveryPending = true
       this.scheduleAutoRecovery()
+
       return
     }
 

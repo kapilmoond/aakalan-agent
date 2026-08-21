@@ -37,12 +37,15 @@ export function WhatsAppQuickConnect({
     }
 
     let cancelled = false
+
     const tick = async () => {
       try {
         const status = await getWhatsAppOnboarding(pairingId)
+
         if (cancelled) {
           return
         }
+
         applyStatus(status)
       } catch (error) {
         if (!cancelled) {
@@ -53,6 +56,7 @@ export function WhatsAppQuickConnect({
 
     void tick()
     const id = window.setInterval(() => void tick(), 1500)
+
     return () => {
       cancelled = true
       window.clearInterval(id)
@@ -63,16 +67,20 @@ export function WhatsAppQuickConnect({
     if (status.qr_payload) {
       setQr(status.qr_payload)
     }
+
     if (status.account_phone || status.account_name) {
       setAccount(status.account_name || status.account_phone || null)
     }
+
     if (status.status === 'waiting') {
       setPhase('waiting')
       setHint('Open WhatsApp → Linked devices → Link a device, then scan this code.')
     }
+
     if (status.status === 'connected') {
       void finish(status.pairing_id)
     }
+
     if (status.status === 'error' || status.status === 'expired') {
       setPhase('idle')
       setBusy(false)
@@ -83,6 +91,7 @@ export function WhatsAppQuickConnect({
   const finish = async (id: string) => {
     setPhase('finishing')
     setHint('Starting WhatsApp… Aakalan will reply from this phone.')
+
     try {
       await applyWhatsAppOnboarding(id)
       setPairingId(null)
@@ -104,10 +113,12 @@ export function WhatsAppQuickConnect({
     setPhase('starting')
     setQr(null)
     setHint('Preparing a one-time QR code…')
+
     try {
       const status = await startWhatsAppOnboarding({ force_new: true, mode: 'self-chat' })
       setPairingId(status.pairing_id)
       applyStatus(status)
+
       if (status.status === 'connected') {
         await finish(status.pairing_id)
       }
@@ -126,6 +137,7 @@ export function WhatsAppQuickConnect({
         // already gone
       }
     }
+
     setPairingId(null)
     setQr(null)
     setBusy(false)
@@ -134,11 +146,17 @@ export function WhatsAppQuickConnect({
   }
 
   const disconnect = async () => {
-    if (!window.confirm('Disconnect this WhatsApp? Aakalan will stop reading and sending messages until you connect again.')) {
+    if (
+      !window.confirm(
+        'Disconnect this WhatsApp? Aakalan will stop reading and sending messages until you connect again.'
+      )
+    ) {
       return
     }
+
     setBusy(true)
     setHint('Removing the old WhatsApp link…')
+
     try {
       await disconnectWhatsApp()
       setPairingId(null)
@@ -151,6 +169,7 @@ export function WhatsAppQuickConnect({
       setPhase('idle')
       setHint('Old WhatsApp was removed. Click Connect if you want a new QR.')
       notifyError(error, 'WhatsApp disconnected. Chat should stay available.')
+
       try {
         await onChanged()
       } catch {
@@ -201,7 +220,11 @@ export function WhatsAppQuickConnect({
           </Button>
         ) : (
           <>
-            <Button className="bg-[#25D366] text-white hover:bg-[#1ebe5d]" disabled={busy} onClick={() => void connect()}>
+            <Button
+              className="bg-[#25D366] text-white hover:bg-[#1ebe5d]"
+              disabled={busy}
+              onClick={() => void connect()}
+            >
               {busy && !qr ? 'Preparing…' : 'Connect WhatsApp'}
             </Button>
             {(phase === 'waiting' || phase === 'starting') && (

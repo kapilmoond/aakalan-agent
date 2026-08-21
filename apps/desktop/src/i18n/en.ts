@@ -1989,7 +1989,8 @@ export const en: Translations = {
       createFailed: 'Could not create project',
       staleBackend:
         'Update the Aakalan Agent backend to create projects — your backend is older than this desktop app (Settings → Updates → Backend).',
-      deleteConfirm: 'This removes the saved project from Aakalan Agent. Files, git repos, and worktrees stay untouched.',
+      deleteConfirm:
+        'This removes the saved project from Aakalan Agent. Files, git repos, and worktrees stay untouched.',
       startWork: 'New worktree',
       newWorktreeTitle: 'New worktree',
       newWorktreeDesc: 'Name the branch for this worktree.',
@@ -2357,7 +2358,8 @@ export const en: Translations = {
     maybeLater: 'Maybe later',
     moreChanges: count => `+ ${count} more change${count === 1 ? '' : 's'} included.`,
     manualTitle: 'Update from your terminal',
-    manualBody: 'You installed Aakalan Agent from the command line, so updates run there too. Paste this into your terminal:',
+    manualBody:
+      'You installed Aakalan Agent from the command line, so updates run there too. Paste this into your terminal:',
     manualPickedUp: 'Aakalan Agent will pick up the new version next time you launch it.',
     guiSkewTitle: 'Update the desktop app',
     guiSkewBody:
@@ -2409,7 +2411,8 @@ export const en: Translations = {
     installLocalDesc: 'Download Aakalan Agent, create its Python environment, and run the backend on this computer.',
     localStartUnavailable: 'Local installation could not start. Restart Aakalan Agent Desktop and try again.',
     remoteSetupTitle: 'Connect to existing Aakalan Agent',
-    remoteSetupDesc: 'Enter your gateway URL. Aakalan Agent Desktop will detect whether it needs a token or browser sign-in.',
+    remoteSetupDesc:
+      'Enter your gateway URL. Aakalan Agent Desktop will detect whether it needs a token or browser sign-in.',
     remoteUrlTitle: 'Gateway URL',
     remoteUrlDesc: 'Use the base URL of the Aakalan Agent gateway, including https:// when remote.',
     remoteUrlPlaceholder: 'https://gateway.example.com/hermes',
@@ -2485,7 +2488,8 @@ export const en: Translations = {
       xai: { short: 'Grok models', description: 'Direct access to xAI Grok models.' },
       local: {
         short: 'self-hosted',
-        description: 'Point Aakalan Agent at a local or self-hosted OpenAI-compatible endpoint (vLLM, llama.cpp, Ollama, etc).'
+        description:
+          'Point Aakalan Agent at a local or self-hosted OpenAI-compatible endpoint (vLLM, llama.cpp, Ollama, etc).'
       }
     },
     backToSignIn: 'Back to sign in',
@@ -2800,7 +2804,8 @@ export const en: Translations = {
       showConsole: 'Show preview console',
       hideDevTools: 'Hide preview DevTools',
       openDevTools: 'Open preview DevTools',
-      finishedRestarting: message => `Aakalan Agent finished restarting the preview server${message ? `: ${message}` : ''}`,
+      finishedRestarting: message =>
+        `Aakalan Agent finished restarting the preview server${message ? `: ${message}` : ''}`,
       failedRestarting: message => `Server restart failed: ${message}`,
       unknownError: 'unknown error',
       restartedTitle: 'Preview server restarted',
@@ -3052,7 +3057,8 @@ export const en: Translations = {
     sudoSendFailed: 'Could not send sudo password',
     secretSendFailed: 'Could not send secret',
     sudoTitle: 'Administrator password',
-    sudoDesc: 'Aakalan Agent needs your sudo password to run a privileged command. It is sent only to your local agent.',
+    sudoDesc:
+      'Aakalan Agent needs your sudo password to run a privileged command. It is sent only to your local agent.',
     sudoPlaceholder: 'sudo password',
     secretTitle: 'Secret required',
     secretDesc: 'Aakalan Agent needs a credential to continue.',

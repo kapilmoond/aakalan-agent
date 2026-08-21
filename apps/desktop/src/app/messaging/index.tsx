@@ -38,8 +38,8 @@ import { CREDENTIAL_CONTROL_CLASS } from '../settings/credential-key-ui'
 import { ListRow } from '../settings/primitives'
 import type { SetStatusbarItemGroup } from '../shell/statusbar-controls'
 
-import { PlatformAvatar } from './platform-icon'
 import { EmailQuickConnect } from './email-quick-connect'
+import { PlatformAvatar } from './platform-icon'
 import { WhatsAppQuickConnect } from './whatsapp-quick-connect'
 
 interface MessagingViewProps extends React.ComponentProps<'section'> {
@@ -593,166 +593,166 @@ function PlatformDetail({
       {platform.error_message && <ErrorBanner>{platform.error_message}</ErrorBanner>}
 
       {platform.id === 'whatsapp' || platform.id === 'email' ? null : (
-      <>
-      {/* Pending pairing requests. Rendered only when someone is actually
+        <>
+          {/* Pending pairing requests. Rendered only when someone is actually
           waiting — an empty-state card here would be permanent chrome on a
           page that is usually about credentials, not approvals. */}
-      {pending.length > 0 && (
-        <section>
-          <SectionTitle>{m.pendingRequests(pending.length)}</SectionTitle>
-          <div className="mt-1 grid gap-1">
-            {pending.map(user => {
-              const busy = approving === pairingKey(user)
-              const waited = typeof user.age_minutes === 'number' ? m.waitingSince(user.age_minutes) : null
+          {pending.length > 0 && (
+            <section>
+              <SectionTitle>{m.pendingRequests(pending.length)}</SectionTitle>
+              <div className="mt-1 grid gap-1">
+                {pending.map(user => {
+                  const busy = approving === pairingKey(user)
+                  const waited = typeof user.age_minutes === 'number' ? m.waitingSince(user.age_minutes) : null
 
-              return (
-                <ListRow
-                  action={
-                    <Button
-                      disabled={busy || !user.request_id}
-                      onClick={() => onApprove(user)}
-                      size="sm"
-                      variant="secondary"
-                    >
-                      {busy ? m.approving : m.approve}
-                    </Button>
-                  }
-                  // An unnamed requester is only a user id — showing it as
-                  // both title and description just repeats itself.
-                  description={[user.user_name ? user.user_id : null, waited].filter(Boolean).join(' · ')}
-                  key={pairingKey(user)}
-                  title={pairingLabel(user)}
-                />
-              )
-            })}
-          </div>
-        </section>
-      )}
+                  return (
+                    <ListRow
+                      action={
+                        <Button
+                          disabled={busy || !user.request_id}
+                          onClick={() => onApprove(user)}
+                          size="sm"
+                          variant="secondary"
+                        >
+                          {busy ? m.approving : m.approve}
+                        </Button>
+                      }
+                      // An unnamed requester is only a user id — showing it as
+                      // both title and description just repeats itself.
+                      description={[user.user_name ? user.user_id : null, waited].filter(Boolean).join(' · ')}
+                      key={pairingKey(user)}
+                      title={pairingLabel(user)}
+                    />
+                  )
+                })}
+              </div>
+            </section>
+          )}
 
-      {approved.length > 0 && (
-        <section>
-          <SectionTitle>{m.approvedUsers(approved.length)}</SectionTitle>
-          <div className="mt-1 grid gap-1">
-            {approved.map(user => (
-              <ListRow
-                action={
-                  <Button
-                    aria-label={m.revokeAria(pairingLabel(user))}
-                    onClick={() => onRevoke(user)}
-                    size="sm"
-                    variant="ghost"
-                  >
-                    {m.revoke}
-                  </Button>
-                }
-                description={user.user_name ? user.user_id : undefined}
-                key={pairingKey(user)}
-                title={pairingLabel(user)}
-              />
-            ))}
-          </div>
-        </section>
-      )}
+          {approved.length > 0 && (
+            <section>
+              <SectionTitle>{m.approvedUsers(approved.length)}</SectionTitle>
+              <div className="mt-1 grid gap-1">
+                {approved.map(user => (
+                  <ListRow
+                    action={
+                      <Button
+                        aria-label={m.revokeAria(pairingLabel(user))}
+                        onClick={() => onRevoke(user)}
+                        size="sm"
+                        variant="ghost"
+                      >
+                        {m.revoke}
+                      </Button>
+                    }
+                    description={user.user_name ? user.user_id : undefined}
+                    key={pairingKey(user)}
+                    title={pairingLabel(user)}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
 
-      <section>
-        <SectionTitle>{m.getCredentials}</SectionTitle>
-        <p className="mt-1 text-[length:var(--conversation-caption-font-size)] leading-(--conversation-caption-line-height) text-(--ui-text-tertiary)">
-          {introCopy(platform, m)}
-        </p>
-        {platform.docs_url && (
-          <div className="mt-3">
-            <Button asChild size="sm" variant="textStrong">
-              <a
-                href={platform.docs_url}
-                onClick={event => {
-                  // Route through the validated external opener instead of
-                  // letting Electron resolve the anchor. A packaged build's
-                  // empty/relative href resolves to the app's own
-                  // index.html file path, which shell.openPath then fails to
-                  // open ("file not found"). Plugin platforms (Teams, etc.)
-                  // ship no docs_url, so this guard + handler keeps the
-                  // button from ever pointing at a local bundle path.
-                  event.preventDefault()
-                  openExternalLink(platform.docs_url)
-                }}
-                rel="noreferrer"
-                target="_blank"
-              >
-                {m.openSetupGuide}
-                <ExternalLink className="size-3.5" />
-              </a>
-            </Button>
-          </div>
-        )}
-      </section>
-
-      <section>
-        <SectionTitle>{m.required}</SectionTitle>
-        <div className="mt-3 grid gap-1">
-          {requiredFields.length > 0 ? (
-            requiredFields.map(field => (
-              <MessagingField
-                edits={edits}
-                field={field}
-                key={field.key}
-                onClear={onClear}
-                onEdit={onEdit}
-                saving={saving}
-              />
-            ))
-          ) : (
-            <p className="text-[length:var(--conversation-caption-font-size)] leading-(--conversation-caption-line-height) text-(--ui-text-tertiary)">
-              {m.noTokenNeeded}
+          <section>
+            <SectionTitle>{m.getCredentials}</SectionTitle>
+            <p className="mt-1 text-[length:var(--conversation-caption-font-size)] leading-(--conversation-caption-line-height) text-(--ui-text-tertiary)">
+              {introCopy(platform, m)}
             </p>
-          )}
-        </div>
-      </section>
+            {platform.docs_url && (
+              <div className="mt-3">
+                <Button asChild size="sm" variant="textStrong">
+                  <a
+                    href={platform.docs_url}
+                    onClick={event => {
+                      // Route through the validated external opener instead of
+                      // letting Electron resolve the anchor. A packaged build's
+                      // empty/relative href resolves to the app's own
+                      // index.html file path, which shell.openPath then fails to
+                      // open ("file not found"). Plugin platforms (Teams, etc.)
+                      // ship no docs_url, so this guard + handler keeps the
+                      // button from ever pointing at a local bundle path.
+                      event.preventDefault()
+                      openExternalLink(platform.docs_url)
+                    }}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    {m.openSetupGuide}
+                    <ExternalLink className="size-3.5" />
+                  </a>
+                </Button>
+              </div>
+            )}
+          </section>
 
-      {optionalFields.length > 0 && (
-        <section>
-          <SectionTitle>{m.recommended}</SectionTitle>
-          <div className="mt-3 grid gap-1">
-            {optionalFields.map(field => (
-              <MessagingField
-                edits={edits}
-                field={field}
-                key={field.key}
-                onClear={onClear}
-                onEdit={onEdit}
-                saving={saving}
-              />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {hiddenCount > 0 && (
-        <section>
-          <button
-            className="flex w-full items-center justify-between gap-2 py-0.5 text-left text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:text-foreground"
-            onClick={() => setShowAdvanced(value => !value)}
-            type="button"
-          >
-            <span>{m.advanced(hiddenCount)}</span>
-            <DisclosureCaret open={showAdvanced} size="0.875rem" />
-          </button>
-          {showAdvanced && (
+          <section>
+            <SectionTitle>{m.required}</SectionTitle>
             <div className="mt-3 grid gap-1">
-              {advancedFields.map(field => (
-                <MessagingField
-                  edits={edits}
-                  field={field}
-                  key={field.key}
-                  onClear={onClear}
-                  onEdit={onEdit}
-                  saving={saving}
-                />
-              ))}
+              {requiredFields.length > 0 ? (
+                requiredFields.map(field => (
+                  <MessagingField
+                    edits={edits}
+                    field={field}
+                    key={field.key}
+                    onClear={onClear}
+                    onEdit={onEdit}
+                    saving={saving}
+                  />
+                ))
+              ) : (
+                <p className="text-[length:var(--conversation-caption-font-size)] leading-(--conversation-caption-line-height) text-(--ui-text-tertiary)">
+                  {m.noTokenNeeded}
+                </p>
+              )}
             </div>
+          </section>
+
+          {optionalFields.length > 0 && (
+            <section>
+              <SectionTitle>{m.recommended}</SectionTitle>
+              <div className="mt-3 grid gap-1">
+                {optionalFields.map(field => (
+                  <MessagingField
+                    edits={edits}
+                    field={field}
+                    key={field.key}
+                    onClear={onClear}
+                    onEdit={onEdit}
+                    saving={saving}
+                  />
+                ))}
+              </div>
+            </section>
           )}
-        </section>
-      )}
-      </>
+
+          {hiddenCount > 0 && (
+            <section>
+              <button
+                className="flex w-full items-center justify-between gap-2 py-0.5 text-left text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:text-foreground"
+                onClick={() => setShowAdvanced(value => !value)}
+                type="button"
+              >
+                <span>{m.advanced(hiddenCount)}</span>
+                <DisclosureCaret open={showAdvanced} size="0.875rem" />
+              </button>
+              {showAdvanced && (
+                <div className="mt-3 grid gap-1">
+                  {advancedFields.map(field => (
+                    <MessagingField
+                      edits={edits}
+                      field={field}
+                      key={field.key}
+                      onClear={onClear}
+                      onEdit={onEdit}
+                      saving={saving}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+        </>
       )}
     </>
   )
@@ -808,8 +808,7 @@ const PLATFORM_INTRO: Record<string, string> = {
   matrix: 'Sign in to your homeserver with the bot account, then copy the access token, user ID, and homeserver URL.',
   signal:
     'Run a signal-cli REST bridge somewhere reachable, then point Aakalan Agent at the URL and the registered phone number.',
-  whatsapp:
-    'Click Connect WhatsApp, scan the QR code in Linked devices, and only your own number can message Aakalan.',
+  whatsapp: 'Click Connect WhatsApp, scan the QR code in Linked devices, and only your own number can message Aakalan.',
   bluebubbles:
     'Run BlueBubbles Server on a Mac with iMessage, expose its API, then point Aakalan Agent at the URL with the server password.',
   homeassistant:

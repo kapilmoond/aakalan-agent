@@ -2,7 +2,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { DesktopBootstrapEvent, DesktopBootstrapState, DesktopConnectionProbeResult } from '@/global'
+import type { DesktopBootstrapEvent, DesktopBootstrapState } from '@/global'
 
 import { DesktopInstallOverlay } from './desktop-install-overlay'
 

@@ -116,9 +116,12 @@ export function AboutSettings() {
               AI training, custom work automation &amp; civil engineering services · Hisar, Haryana
             </p>
             <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-              Shop No. 102, 1st Floor, Sector 15, Hisar, Haryana<br />
-              Phone / WhatsApp: +91 7015966089<br />
-              Email: contact@aakalaninfra.com<br />
+              Shop No. 102, 1st Floor, Sector 15, Hisar, Haryana
+              <br />
+              Phone / WhatsApp: +91 7015966089
+              <br />
+              Email: contact@aakalaninfra.com
+              <br />
               Website: www.aakalaninfra.com
             </p>
           </div>

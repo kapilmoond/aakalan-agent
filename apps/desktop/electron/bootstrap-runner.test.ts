@@ -244,6 +244,7 @@ test('resolveInstallScript retries aakalan-cli1 main after a pinned SHA 404', as
 
   try {
     const refs = []
+
     const result = await resolveInstallScript({
       installStamp: { commit: 'a'.repeat(40), branch: 'main' },
       sourceRepoRoot: null,
@@ -252,9 +253,11 @@ test('resolveInstallScript retries aakalan-cli1 main after a pinned SHA 404', as
       _bundled: () => null,
       _download: async (ref, destPath) => {
         refs.push(ref)
+
         if (ref !== 'main') {
           throw new Error('Failed to download install.ps1: HTTP 404 from github')
         }
+
         fs.mkdirSync(path.dirname(destPath), { recursive: true })
         fs.writeFileSync(destPath, '#!/bin/sh\necho main\n')
 
