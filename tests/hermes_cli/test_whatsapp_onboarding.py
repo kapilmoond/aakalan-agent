@@ -1,6 +1,8 @@
 import asyncio
 import time
 
+import pytest
+
 
 class _FakeProc:
     def __init__(self, lines=None, returncode=0):
@@ -23,10 +25,17 @@ class _FakeProc:
         self.killed = True
 
 
+@pytest.fixture(autouse=True)
+def _isolate_onboarding_state(tmp_path, monkeypatch):
+    """Keep the persisted onboarding state inside tmp_path for every test."""
+    from hermes_cli import web_server as ws
 
-
-
-
+    ws._whatsapp_onboarding_sessions.clear()
+    ws._whatsapp_onboarding_sessions_loaded = False
+    state_file = tmp_path / "state" / "whatsapp_onboarding.json"
+    monkeypatch.setattr(ws, "_whatsapp_onboarding_state_file", lambda: state_file)
+    yield
+    ws._whatsapp_onboarding_sessions.clear()
 
 
 def test_apply_whatsapp_onboarding_saves_pairing_policy(monkeypatch):
@@ -97,6 +106,12 @@ def test_start_whatsapp_onboarding_existing_creds_returns_linked_account(monkeyp
     monkeypatch.setattr(ws, "_whatsapp_session_path", lambda: session_dir)
     monkeypatch.setattr(ws.secrets, "token_urlsafe", lambda size: "existing-creds")
 
+    # A live bridge reports connected, so the stored session is genuinely usable.
+    async def _connected(session_path):
+        return True
+
+    monkeypatch.setattr(ws, "_whatsapp_session_connected", _connected)
+
     result = asyncio.run(
         ws.start_whatsapp_onboarding(
             ws.WhatsAppOnboardingStart(mode="self-chat", allowed_users="")
@@ -112,7 +127,109 @@ def test_start_whatsapp_onboarding_existing_creds_returns_linked_account(monkeyp
     assert old_record.status == "cancelled"
     assert old_proc.terminated is True
     assert ws._whatsapp_onboarding_sessions["existing-creds"].account_phone == "15551234567"
+
+
+def test_start_whatsapp_onboarding_stub_creds_spawns_pairing(monkeypatch, tmp_path):
+    """A 0-byte stub creds.json (baileys writes it before any scan) must NOT
+    be reported as connected — the pairing flow must spawn a fresh QR."""
+    from hermes_cli import web_server as ws
+
+    session_dir = tmp_path / "session"
+    session_dir.mkdir()
+    (session_dir / "creds.json").write_text("", encoding="utf-8")  # empty stub
+
+    monkeypatch.setattr(ws, "_whatsapp_session_path", lambda: session_dir)
+    monkeypatch.setattr(ws.secrets, "token_urlsafe", lambda size: "stub-creds")
+
+    async def _not_connected(session_path):
+        return False
+
+    monkeypatch.setattr(ws, "_whatsapp_session_connected", _not_connected)
+    spawned = []
+    monkeypatch.setattr(
+        ws,
+        "_run_whatsapp_pairing",
+        lambda pairing_id, session_path, mode: spawned.append((pairing_id, mode)),
+    )
+
+    result = asyncio.run(
+        ws.start_whatsapp_onboarding(
+            ws.WhatsAppOnboardingStart(mode="self-chat", allowed_users="")
+        )
+    )
+
+    assert result["pairing_id"] == "stub-creds"
+    assert result["status"] != "connected"
+    assert result["account_id"] is None
+    assert spawned == [("stub-creds", "self-chat")]
+
+
+def test_start_whatsapp_onboarding_revoked_session_spawns_pairing(monkeypatch, tmp_path):
+    """A session whose creds.json parses but whose bridge is dead (logged out /
+    revoked) must ALSO spawn pairing — this was the reported bug: the UI kept
+    saying connected and never produced a QR."""
+    from hermes_cli import web_server as ws
+
+    session_dir = tmp_path / "session"
+    session_dir.mkdir()
+    (session_dir / "creds.json").write_text(
+        '{"me":{"id":"15551234567:1@s.whatsapp.net","name":"Hermes Bot"}}',
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(ws, "_whatsapp_session_path", lambda: session_dir)
+    monkeypatch.setattr(ws.secrets, "token_urlsafe", lambda size: "revoked-creds")
+
+    async def _not_connected(session_path):
+        return False
+
+    monkeypatch.setattr(ws, "_whatsapp_session_connected", _not_connected)
+    spawned = []
+    monkeypatch.setattr(
+        ws,
+        "_run_whatsapp_pairing",
+        lambda pairing_id, session_path, mode: spawned.append((pairing_id, mode)),
+    )
+
+    result = asyncio.run(
+        ws.start_whatsapp_onboarding(
+            ws.WhatsAppOnboardingStart(mode="self-chat", allowed_users="")
+        )
+    )
+
+    assert result["pairing_id"] == "revoked-creds"
+    assert result["status"] != "connected"
+    assert spawned == [("revoked-creds", "self-chat")]
+
+
+def test_whatsapp_onboarding_sessions_survive_restart(monkeypatch, tmp_path):
+    """An in-flight pairing must not 404 after a gateway restart — it is
+    restored as expired with a clear message so the user starts a new setup."""
+    from hermes_cli import web_server as ws
+
+    record = ws._WhatsAppOnboardingSession(
+        proc=None,
+        mode="self-chat",
+        allowed_users="",
+        session_path=str(tmp_path / "session"),
+        expires_at="2099-01-01T00:00:00Z",
+        expires_at_ts=time.time() + 600,
+        status="waiting",
+        qr_payload="QRDATA",
+    )
+    ws._whatsapp_onboarding_sessions["p1"] = record
+    ws._persist_whatsapp_onboarding_sessions()
+
+    # Simulate a gateway restart: fresh in-memory dict + module flag.
     ws._whatsapp_onboarding_sessions.clear()
+    ws._whatsapp_onboarding_sessions_loaded = False
+    ws._load_whatsapp_onboarding_sessions()
+
+    restored = ws._whatsapp_onboarding_sessions.get("p1")
+    assert restored is not None
+    assert restored.status == "expired"
+    assert "interrupted by a gateway restart" in (restored.error or "")
+    assert restored.qr_payload is None
 
 
 def test_effective_messaging_state_not_connected_when_gateway_down():
@@ -224,7 +341,3 @@ def test_apply_forces_fresh_restart_when_enabling_whatsapp(monkeypatch):
 
     assert result["ok"] is True
     assert restarts == [(None, True)]
-
-
-
-

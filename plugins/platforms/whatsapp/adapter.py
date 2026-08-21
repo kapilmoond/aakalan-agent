@@ -355,6 +355,23 @@ def _file_content_hash(path: Path) -> str:
         return ""
 
 
+def _creds_file_looks_authenticated(path: Path) -> bool:
+    """True only when creds.json is parseable and carries a linked account.
+
+    baileys writes an empty creds.json stub the moment a bridge connects,
+    before any scan — an existing file is not proof of a working session,
+    and a revoked session exits the bridge with ``logged_out``.
+    """
+    import json
+
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
+    me = payload.get("me") if isinstance(payload, dict) else None
+    return isinstance(me, dict) and bool(me.get("id"))
+
+
 def check_whatsapp_requirements() -> bool:
     """
     Check if WhatsApp dependencies are available.
@@ -539,9 +556,9 @@ class WhatsAppAdapter(WhatsAppBehaviorMixin, BasePlatformAdapter):
         # clear pairing message instead of the watcher
         # silently hammering an unconfigured platform.
         creds_path = self._session_path / "creds.json"
-        if not creds_path.exists():
+        if not _creds_file_looks_authenticated(creds_path):
             logger.warning(
-                "[%s] WhatsApp is enabled but not paired (no creds.json at %s). "
+                "[%s] WhatsApp is enabled but not paired (no valid creds.json at %s). "
                 "Pair from the dashboard or run `hermes whatsapp`; remove "
                 "WHATSAPP_ENABLED from your .env to disable.",
                 self.name, creds_path,

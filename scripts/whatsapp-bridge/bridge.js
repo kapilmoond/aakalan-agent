@@ -24,7 +24,7 @@ import express from 'express';
 import { Boom } from '@hapi/boom';
 import pino from 'pino';
 import path from 'path';
-import { mkdirSync, readFileSync, existsSync, readdirSync, unlinkSync } from 'fs';
+import { mkdirSync, readFileSync, existsSync, readdirSync, rmSync, unlinkSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { randomBytes, createHash } from 'crypto';
 import { execFileSync } from 'child_process';
@@ -440,6 +440,25 @@ async function startSocket() {
       connectionState = 'disconnected';
 
       if (reason === DisconnectReason.loggedOut) {
+        if (PAIR_ONLY) {
+          // Stale/revoked credentials can never produce a QR. Wipe them and
+          // reconnect so the pairing flow emits a fresh code instead of dying
+          // (the old exit(1) caused endless "setup session was not found"
+          // loops whenever the stored session had been logged out).
+          console.log('↻ Session logged out — clearing stale credentials and reconnecting for a fresh QR...');
+          try {
+            rmSync(SESSION_DIR, { recursive: true, force: true });
+            mkdirSync(SESSION_DIR, { recursive: true });
+          } catch (err) {
+            console.error('Failed to clear stale session:', err);
+          }
+          connectionState = 'disconnected';
+          startSocket().catch((err) => {
+            emitPairEvent({ event: 'error', error: err?.message || String(err) });
+            process.exit(1);
+          });
+          return;
+        }
         emitPairEvent({ event: 'error', error: 'logged_out', reason });
         if (!PAIR_JSON) {
           console.log('❌ Logged out. Delete session and restart to re-authenticate.');
