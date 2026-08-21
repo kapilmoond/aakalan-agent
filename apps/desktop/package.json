@@ -2,7 +2,7 @@
   "name": "aakalan-agent-desktop",
   "productName": "Aakalan Agent",
   "private": true,
-  "version": "0.17.1",
+  "version": "0.17.2",
   "description": "Native desktop shell for Aakalan Agent.",
   "author": "Aaklan Infra Consultancy",
   "type": "module",

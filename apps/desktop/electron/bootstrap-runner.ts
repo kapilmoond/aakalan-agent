@@ -978,7 +978,10 @@ async function runBootstrap(opts) {
 
   try {
     const existingCheckout = hasExistingGitCheckout(activeRoot)
-    const pinCommit = !existingCheckout
+    // Website installers must clone latest aakalan-cli1 main, not the SHA
+    // frozen when this EXE was built. Pinning made new PCs keep an old CLI
+    // (WhatsApp leftover-creds bug) until a new installer was shipped.
+    const pinCommit = false
 
     if (existingCheckout && installStamp && installStamp.commit) {
       emit({
